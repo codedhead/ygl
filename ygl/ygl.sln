@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ygl", "ygl\ygl.vcproj", "{49FC4C99-14EB-4BD9-A040-0C8962A4A93B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{49FC4C99-14EB-4BD9-A040-0C8962A4A93B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{49FC4C99-14EB-4BD9-A040-0C8962A4A93B}.Debug|Win32.Build.0 = Debug|Win32
+		{49FC4C99-14EB-4BD9-A040-0C8962A4A93B}.Release|Win32.ActiveCfg = Release|Win32
+		{49FC4C99-14EB-4BD9-A040-0C8962A4A93B}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
