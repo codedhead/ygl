@@ -1,0 +1,28 @@
+thread-safe modelview matrix
+
+tri-fans same as convex polygon?
+
+add check, set error code
+
+double or float???
+
+3.13
+flood fill optimize parrelell? with bresenham boudary
+render boundary to frame buffer and aux bit buffer, then flood fill to frame buffer
+
+Parallel algorithm: process each scan line in 
+one processor. Each scan line is independent
+
+
+remove redundant headers, like stdio.h
+
+3.14
+scanline exceptions
+clipping
+lighting, smooth shading
+zbuffer, culling
+texture, mipmaping
+
+anti alias (line, with width, point)
+
+shader
