@@ -25,9 +25,14 @@
 
 #define ROUND(x) ((int)((x)+0.5f))
 
+#define AXIS_X 0
+#define AXIS_Y 1
+#define AXIS_Z 2
+
 #define X_OF(p) ((p)[0])
 #define Y_OF(p) ((p)[1])
 #define Z_OF(p) ((p)[2])
+#define W_OF(p) ((p)[3])
 
 #define XOR_SWAP(a,b) {a=a^b;b=a^b;a=a^b;}
 

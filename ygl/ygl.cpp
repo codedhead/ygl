@@ -165,9 +165,14 @@ inline void __perspect_divide(GLfloat* p)
 inline void __viewport_transform(GLfloat* p)
 {
 	// todo: cache it??
-	p[0]=glctx.viewport.w*0.5f*p[0]+glctx.viewport.ox;
-	p[1]=glctx.viewport.h*0.5f*p[1]+glctx.viewport.oy;
+
+	// we ignore left,top, move pixels to (0,0)
+	p[0]=(glctx.viewport.w-1)*0.5f*p[0]/*+glctx.viewport.ox*/+(glctx.viewport.w-1)*0.5f;
+	p[1]=(glctx.viewport.h-1)*0.5f*p[1]/*+glctx.viewport.oy*/+(glctx.viewport.h-1)*0.5f;
 	p[2]=(glctx.zfar-glctx.znear)*0.5f*p[3]+(glctx.zfar+glctx.znear)*0.5f;
+
+	// width=480
+	// mapto [0,479] or handle this using top left fill convention??
 }
 
 namespace ygl{
@@ -189,15 +194,15 @@ void glFlush()
 {
 	buffer::draw(glctx.viewport.ox-glctx.viewport.w/2,
 		glctx.viewport.oy-glctx.viewport.h/2,
-		glctx.viewport.ox+glctx.viewport.w/2,
-		glctx.viewport.oy+glctx.viewport.h/2);
+		glctx.viewport.w,
+		glctx.viewport.h);
 }
 void glFinish()
 {
 	buffer::draw(glctx.viewport.ox-glctx.viewport.w/2,
 		glctx.viewport.oy-glctx.viewport.h/2,
-		glctx.viewport.ox+glctx.viewport.w/2,
-		glctx.viewport.oy+glctx.viewport.h/2);
+		glctx.viewport.w,
+		glctx.viewport.h);
 }
 void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
 {
@@ -300,8 +305,8 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 	glctx.matrix_proj.peek()->onP(newv.p);
 
 
-	const Vertex* vert_buf[10];
-	Vertex clip_buf[10];
+	//const Vertex* vert_buf[10];
+	Vertex /*vert_buf[10],*/clip_buf[10];
 	GLint clip_cnt=0;
 	switch(glctx.begin_type)
 	{
@@ -367,13 +372,18 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 		{
 			glctx.asm_state.tris.index=0;
 
-			vert_buf[0]=glctx.asm_state.tris.verts;
-			vert_buf[1]=vert_buf[0]+1;
-			vert_buf[2]=&newv;
+			// copy
+			clip_buf[0]=glctx.asm_state.tris.verts[0];
+			clip_buf[1]=glctx.asm_state.tris.verts[1];
+			clip_buf[2]=newv;
 
-			if(clip::polygon(vert_buf,3,clip_buf,&clip_cnt))
+			if(clip::polygon(clip_buf,3,&clip_cnt))
 			{
-				CLIP_SPACE_TO_WINDOW_3(clip_buf);
+				//CLIP_SPACE_TO_WINDOW_3(clip_buf);
+				for(int i=0;i<clip_cnt;++i)
+				{
+					CLIP_SPACE_TO_WINDOW(clip_buf[i].p);
+				}
 
 				raster::scanline(clip_buf,clip_cnt);
 			}
@@ -393,14 +403,20 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 		{
 			glctx.asm_state.quads.index=0;
 
-			vert_buf[0]=glctx.asm_state.quads.verts;
-			vert_buf[1]=vert_buf[0]+1;
-			vert_buf[2]=vert_buf[0]+2;
-			vert_buf[3]=&newv;
+			// copy
+			clip_buf[0]=glctx.asm_state.tris.verts[0];
+			clip_buf[1]=glctx.asm_state.tris.verts[1];
+			clip_buf[2]=glctx.asm_state.tris.verts[2];
+			clip_buf[3]=newv;
 
-			if(clip::polygon(vert_buf,4,clip_buf,&clip_cnt))
+			// pass in clip_buf, return back in clip_buf
+			if(clip::polygon(clip_buf,4,&clip_cnt))
 			{
-				CLIP_SPACE_TO_WINDOW_4(clip_buf);
+				//CLIP_SPACE_TO_WINDOW_4(clip_buf);
+				for(int i=0;i<clip_cnt;++i)
+				{
+					CLIP_SPACE_TO_WINDOW(clip_buf[i].p);
+				}
 
 				raster::scanline(clip_buf,clip_cnt);
 			}
@@ -465,12 +481,12 @@ void glRectf(GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2)
 {
 	CHECK_IS_NO_BEGIN
 
-	glBegin(GL_POLYGON);
+	glBegin(GL_QUADS);
 	glVertex2f(x1, y1);
 	glVertex2f(x2, y1);
 	glVertex2f(x2, y2);
 	glVertex2f(x1, y2); 
-	glEnd( );
+	glEnd();
 }
 
 /* matrix */

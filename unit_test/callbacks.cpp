@@ -1,13 +1,15 @@
 #include "callbacks.h"
 
+
 #include <windows.h>
 #include <stdio.h>
 
-//#define USE_YGL
+#define USE_YGL
 
 #ifdef USE_YGL
 #include "../ygl/ygl.h"
 #include "../ygl/yglu.h"
+#include "../ygl/device.h"
 using namespace ygl;
 #else
 #include <gl/GL.h>
@@ -73,12 +75,19 @@ void drawWireBox(float halfSize)
 int width = 512;  
 int height = 512;
 
+void init()
+{
+	device::init();
+}
+
 void reshape(int w, int h)  
-{  
+{
+	//device::resize(w,h);
 	//glClearColor(0.0, 0.0, 0.0, 0.0); 
 	width=w;height=h;
 }
 extern float rot_angle;
+extern float translate_x,translate_y;
 
 int frame_cnt=0;
 LARGE_INTEGER tot_counter={0},pc1,pc2;
@@ -89,20 +98,29 @@ void display(void)
 	//glEnable(GL_CULL_FACE);
 	
 QueryPerformanceCounter(&pc1);
-	glViewport(0, 0, width, height);
+#define VIEWPORT_BORDER 16
+	glViewport(VIEWPORT_BORDER, VIEWPORT_BORDER, width-2*VIEWPORT_BORDER, height-2*VIEWPORT_BORDER);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  
 
 	glMatrixMode(GL_PROJECTION);  
 	glLoadIdentity();
-	//gluOrtho2D(-width/2,width/2,-height/2,height/2);
-	gluPerspective(90, (double)width/(double)height, 0.1, 10000.0);  
-	//glFrustum(-0.1,0.1,-0.1,0.1,0.1,10000.0);
 
+//#define TEST_ORTHO
+#ifdef TEST_ORTHO
+	gluOrtho2D(-width/2,width/2,-height/2,height/2);
+	glMatrixMode(GL_MODELVIEW);  
+	glLoadIdentity();
+#else
+	gluPerspective(90, (double)width/(double)height, 0.1, 10000.0);  
 	glMatrixMode(GL_MODELVIEW);  
 	glLoadIdentity();
 	gluLookAt(0.,0.,4.,0,0.,0.,0.,1.,0.);
+#endif
+	
+	
 
 //rot_angle=90.f;
+	glTranslatef(translate_x,translate_y,0.f);
 	glRotatef(rot_angle,0.f,1.f,0.f);
 // 	glBegin(GL_LINES);
 // 	glVertex2f(-0.25f*width,0);
@@ -113,12 +131,18 @@ QueryPerformanceCounter(&pc1);
 // 	glVertex2f(0.25f*width,-0.25f*height);
 // 	glVertex2f(0,0.25f*height);
 // 	glEnd();
-// 	glBegin(GL_QUADS);
+//	glBegin(GL_QUADS);
 // 	glVertex2f(-0.25f*width,-0.25f*height);
 // 	glVertex2f(0.25f*width,-0.25f*height);
 // 	glVertex2f(0.25f*width,0.25f*height);
 // 	glVertex2f(-0.25f*width,0.25f*height);
+// 	glVertex2f(-0.5f*width,-0.5f*height);
+// 	glVertex2f(0.5f*width,-0.5f*height);
+// 	glVertex2f(0.5f*width,0.5f*height);
+// 	glVertex2f(-0.5f*width,0.5f*height);
 // 	glEnd();
+	//glRectf(-0.25f*width,-0.25f*height,0.25f*width,0.25f*height);
+	//glRectf(-0.5f*width,-0.5f*height,0.5f*width,0.5f*height);
 	drawWireBox(1.f);
 
 #ifdef USE_YGL

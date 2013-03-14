@@ -94,11 +94,110 @@ namespace clip
 		return true;
 	}
 
-	GLboolean polygon(const Vertex** verts,GLint vcnt,Vertex* clip_buf,GLint* clip_cnt)
+	// p1 -> p2
+	//					output:
+	// 1) in, in:		p2
+	// 2) in, out:		isect
+	// 3) out, in:		isect, p2
+	// 4) out, out:	
+
+#define IN_IN 3
+#define IN_OUT 1
+#define OUT_IN 2
+#define OUT_OUT 0
+
+#define NEGATIVE_MASK 0x80
+#define _NEGATIVE_MASK 0x7f
+
+	GLboolean ply_by_plane(int axis,Vertex* verts,GLint vcnt,Vertex* clip_buf,GLint* clip_cnt)
 	{
+		Vertex* p1=verts,*p2=p1+1,*clip_buf_start=clip_buf;
+		Vertex pisect;
+		GLdouble bc1,bc2,u;
+		bool axis_negate=(axis&NEGATIVE_MASK);
+		axis&=_NEGATIVE_MASK;
+		
+		*clip_cnt=0;
+		
+		// vcnt-1
+		while(--vcnt>0)
+		{
+clip_plane_start:
+			if(axis_negate)
+			{
+				bc1=W_OF(p1->p)+p1->p[axis];
+				bc2=W_OF(p2->p)+p2->p[axis];
+			}
+			else
+			{
+				bc1=W_OF(p1->p)-p1->p[axis];
+				bc2=W_OF(p2->p)-p2->p[axis];
+			}
+
+			switch((bc1>0.0)|((bc2>0.0)<<1))
+			{
+			case IN_IN:
+				*(clip_buf++)=*p2;
+				break;
+			case IN_OUT:
+				{
+					Assert(bc1!=bc2);
+					u=bc1/(bc1-bc2);
+					LERP_COMPONENT_4(&pisect,p,p1,p2,u);
+					LERP_COMPONENT_4(&pisect,col_front_pri,p1,p2,u);
+
+					*(clip_buf++)=pisect;
+				}
+				break;
+			case OUT_IN:
+				{
+					Assert(bc1!=bc2);
+					u=bc1/(bc1-bc2);
+					LERP_COMPONENT_4(&pisect,p,p1,p2,u);
+					LERP_COMPONENT_4(&pisect,col_front_pri,p1,p2,u);
+
+					*(clip_buf++)=pisect;
+					*(clip_buf++)=*p2;
+				}
+				break;
+			}
+			p1=p2++;
+		}
+		// loop, last point and first point
+		if(vcnt==0)
+		{
+			p2=verts;
+			goto clip_plane_start;
+		}
+
+		//Assert(!ret||ret>=2);
+		//Assert(ret!=1);
+
+		return (*clip_cnt=(clip_buf-clip_buf_start))>0;
+	}
+
+	// Sutherland-Hodgman
+	GLboolean polygon(Vertex* clip_buf,GLint vcnt,GLint* clip_cnt)
+	{
+		Vertex v2[10];
 		*clip_cnt=vcnt;
-		for(int i=0;i<vcnt;++i)
-			clip_buf[i]=*verts[i];
-		return true;
+
+#define CLIP_1TO2 clip_buf,*clip_cnt,v2,&vcnt
+#define CLIP_2TO1 v2,vcnt,clip_buf,clip_cnt
+// #define CLIP_1TO2(v1,c1,v2,c2) v1,c1,v2,&c2
+// #define CLIP_2TO1(v1,c1,v2,c2) v2,c2,v1,&c1
+
+		// 0x80 indicates negative
+		return ply_by_plane(AXIS_Z|NEGATIVE_MASK,CLIP_1TO2)&&
+			ply_by_plane(AXIS_Z,CLIP_2TO1)&&
+			ply_by_plane(AXIS_X|NEGATIVE_MASK,CLIP_1TO2)&&
+			ply_by_plane(AXIS_X,CLIP_2TO1)&&
+			ply_by_plane(AXIS_Y|NEGATIVE_MASK,CLIP_1TO2)&&
+			ply_by_plane(AXIS_Y,CLIP_2TO1);
+
+// 		*clip_cnt=vcnt;
+// 		for(int i=0;i<vcnt;++i)
+// 			clip_buf[i]=*verts[i];
+// 		return true;
 	}
 }

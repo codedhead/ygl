@@ -15,8 +15,12 @@ one processor. Each scan line is independent
 
 
 remove redundant headers, like stdio.h
+merge cpp, use inline
 
 3.14
+
+clipspace 0,0,0 1,1,1 more efficient?
+
 scanline exceptions
 clipping
 lighting, smooth shading
@@ -24,5 +28,10 @@ zbuffer, culling
 texture, mipmaping
 
 anti alias (line, with width, point)
+http://blog.csdn.net/he_wen_jian/article/details/8563864
+http://blog.csdn.net/d04421024/article/details/4852698
+http://www.glprogramming.com/red/chapter06.html
+
+
 
 shader

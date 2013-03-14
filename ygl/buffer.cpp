@@ -50,19 +50,33 @@ namespace buffer
 	{
 		int r=YGL_COLOR_F2I(rf),g=YGL_COLOR_F2I(gf),b=YGL_COLOR_F2I(bf);
 		GLubyte* p;
+// 		for(int y=0;y<YGL_MAX_BUFFER_HEIGHT;++y)
+// 			for(int x=0;x<YGL_MAX_BUFFER_WIDTH;++x)
+// 			{
+// 				p=frame_buffer+BUFFER_INDEX_RGB(y,x);
+// 				*p++=r;
+// 				*p++=g;
+// 				*p++=b;
+// 			}
 		for(int y=0;y<YGL_MAX_BUFFER_HEIGHT;++y)
+		{
+			p=frame_buffer+BUFFER_INDEX_RGB(y,0);
 			for(int x=0;x<YGL_MAX_BUFFER_WIDTH;++x)
 			{
-				p=frame_buffer+BUFFER_INDEX_RGB(y,x);
+				
 				*p++=r;
 				*p++=g;
 				*p++=b;
 			}
+		}
 	}
 
-	/*inline */void draw(int l,int t,int r,int b)
+	// todo: sub l, r when plot??
+	// so can directly pass in frame_buffer
+
+	/*inline */void draw(int l,int t,int w,int h)
 	{
-		device::draw(frame_buffer,l,t,r,b);
+		device::draw(frame_buffer/*+BUFFER_INDEX_RGB(t,l)*/,l,t,w,h);
 	}
 
 	void resize(int w,int h)

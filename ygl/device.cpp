@@ -1,20 +1,42 @@
 #include "device.h"
 
 #include <windows.h>
+
+#define USE_OPENGL
+//#define USE_GLEW
+
 #ifdef USE_OPENGL
+
+#ifdef USE_GLEW
+#include <gl/glew.h>
+#pragma comment(lib,"glew32.lib")
+#else
 #include <gl/GL.h>
-#pragma comment(lib,"opengl32.lib")
+#endif
+//#pragma comment(lib,"opengl32.lib")
 //#pragma comment(lib,"glu32.lib")
 #endif
 
 #include <stdlib.h>
 #include <stdio.h>
 
-
 namespace device
 {
 	LARGE_INTEGER pc1,pc2;
 #ifdef USE_OPENGL
+//	void resize(int w,int h)
+//	{
+// 		glMatrixMode(GL_PROJECTION);
+// 		glLoadIdentity();
+// 		glOrtho(0,w,0,h,-1.0,1.0);
+// 		glViewport(0,0,w,h);
+//	}
+	void init()
+	{
+#ifdef USE_GLEW
+		glewInit();
+#endif
+	}
 
 	void draw(void* buffer,int l,int b,int w,int h)
 	{
@@ -28,16 +50,16 @@ namespace device
 		//////////////////////////////////////////////////////////////////////////
 		//QueryPerformanceCounter(&pc1);
 
+#ifdef USE_GLEW
+		glWindowPos2i(l,b);
+#else
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		glOrtho(0,w,0,h,-1.0,1.0);
-		glViewport(0,0,w,h);
-
-		
-		
-		
+		glOrtho(0,l+w,0,b+h,-1.0,1.0);
+		glViewport(0,0,l+w,b+h);
 
 		glRasterPos2i(l,b);
+#endif
 		glDrawPixels(w, h,GL_RGB, GL_UNSIGNED_BYTE, buffer);
 		glFlush();
 

@@ -150,7 +150,7 @@ namespace raster
 #else
 		ETRecord():prev(0),next(0){}
 #endif
-		void build(Vertex* v1,Vertex* v2)
+		virtual void build(Vertex* v1,Vertex* v2)
 		{
 			prev=next=0;
 			// we start from ymin so ymin always < ymax (bresenham)
@@ -175,10 +175,21 @@ namespace raster
 
 		}
 
-		inline void incre()
+		virtual void incre()
 		{
 			cur_x+=m_recip;
 		}
+		virtual get_color()
+		{
+
+		}
+	};
+
+	struct ETRecordSmooth : public ETRecord
+	{
+		GLubyte color_w[]; // r/w, g/w, b/w
+		GLfloat _w; // 1/w
+		GLfloat d_color_w[4],d_w; // delta
 	};
 
 	struct ETable
@@ -383,6 +394,7 @@ namespace raster
 		ETRecord* lefte,*righte,*nexte;
 		int left,right;
 		GLubyte* cbuf;
+		// todo: dont test on et_ptrs[y] for every scanline? (linklist)
 		for(int y=ymin;y<=ymax;++y)
 		{
 			if(et_ptrs[y])
