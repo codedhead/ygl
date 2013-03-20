@@ -6,6 +6,7 @@ namespace conflict{
 }
 
 void init();
+void quit();
 void reshape(int width, int height);
 void display(void);
 

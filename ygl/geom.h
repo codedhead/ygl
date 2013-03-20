@@ -52,7 +52,7 @@ public:
 	{
 		return Vector(-x,-y,-z);
 	}
-	void do_negate()
+	inline void do_negate()
 	{
 		x=-x;y=-y;z=-z;
 	}
@@ -151,6 +151,15 @@ public:
 		float ret=length();
 		*this/=ret;
 		return ret;
+	}
+	static inline float normalize(float* v)
+	{
+		// todo: error checking??
+		float len=sqrtf(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+		Assert(!isnan(len)&&len!=0.f);
+		float inv = 1.f / len;
+		v[0]*=inv;v[1]*=inv;v[2]*=inv;
+		return len;
 	}
 	float normalize2()
 	{
@@ -429,6 +438,15 @@ public:
 		float ret=length();
 		*this/=ret;
 		return ret;
+	}
+	inline void set(float x,float y,float z)
+	{
+		this->x=x;this->y=y;this->z=z;
+	}
+	inline void set_and_normalize(float x,float y,float z)
+	{
+		this->x=x;this->y=y;this->z=z;
+		normalize();
 	}
 	float normalize2()
 	{

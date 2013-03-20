@@ -183,7 +183,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\light.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\raster.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\texture.cpp"
 				>
 			</File>
 			<File
@@ -200,6 +208,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\bitset.h"
+				>
+			</File>
 			<File
 				RelativePath=".\buffer.h"
 				>
@@ -245,6 +257,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\texture.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ygl.h"
 				>
 			</File>
@@ -279,15 +295,15 @@
 			Name="test"
 			>
 			<File
-				RelativePath="..\unit_test\callbacks.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\unit_test\callbacks.h"
-				>
-			</File>
-			<File
 				RelativePath="..\unit_test\m.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\unit_test\sphere.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\unit_test\sphere.h"
 				>
 			</File>
 		</Filter>

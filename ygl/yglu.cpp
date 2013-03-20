@@ -41,4 +41,9 @@ namespace ygl{
 
 		ygl::glMultMatrixf(m);
 	}
+
+	void gluSphere(GLdouble radius, GLint slices, GLint stacks)
+	{
+
+	}
 }

@@ -37,21 +37,22 @@ struct LightSource
 		quadratic_attenuation=0.f;
 	}
 
-	void lit(const Vertex& vert,const Material& front_mat,const Vector& view);
-	void lit_spec(const Vertex& vert,const Material& front_mat,const Vector& view,GLfloat* color,GLfloat* spec_color);
-	void lit2(const Vertex& vert,const Material& front_mat,const Material& back_mat,const Vector& view,GLfloat* color);
-	void lit2_spec(const Vertex& vert,const Material& front_mat,const Material& back_mat,const Vector& view,GLfloat* color,GLfloat* spec_color);
+	void lit(Vertex* vert,const Normal& nrm,const Vector& v_eye,const Material& front_mat);
+	void lit_spec(Vertex* vert,const Normal& nrm,const Vector& v_eye,const Material& front_mat);
+	void lit2(Vertex* vert,const Material& front_mat,const Material& back_mat,const Vector& view,GLfloat* color);
+	void lit2_spec(Vertex* vert,const Material& front_mat,const Material& back_mat,const Vector& view,GLfloat* color,GLfloat* spec_color);
 
 
 	GLfloat position[4];
 	// intensity
 	GLfloat ambient[4],diffuse[4],specular[4];
-	GLfloat spot_cutoff_cos,spot_exponent,spot_direction[3];
+	GLfloat spot_cutoff_cos,spot_exponent;//,spot_direction[3];
+	Vector spot_direction;
 	GLfloat constant_attenuation,linear_attenuation,quadratic_attenuation;
 	
 };
 
-void do_lighting(const Vertex& vert,GLfloat* color,GLfloat* spec_color=0);
+void do_lighting(Vertex* vert,const Normal& nrm);
 
 
 #endif

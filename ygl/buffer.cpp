@@ -16,35 +16,106 @@ namespace buffer
 	// in bytes todo: can we do better??
 #define BUFFER_ALIGN_BY_4BYTES_SIZE(sz) ((sz)+3)/4*4
 
-	int buffer_line_width=YGL_MAX_BUFFER_WIDTH,
+	int buffer_height=YGL_MAX_BUFFER_HEIGHT,buffer_line_width=YGL_MAX_BUFFER_WIDTH,
 		buffer_line_bytes_rgb=BUFFER_ALIGN_BY_4BYTES_SIZE(YGL_MAX_BUFFER_WIDTH*3);
 
 
 #define BUFFER_INDEX_RGB(y,x) ((y)*buffer_line_bytes_rgb+3*(x))
+#define BUFFER_INDEX_DEPTH(y,x) ((y)*buffer_line_width+(x))
 
 
 	GLubyte frame_buffer[YGL_MAX_BUFFER_HEIGHT*
 		BUFFER_ALIGN_BY_4BYTES_SIZE(YGL_MAX_BUFFER_WIDTH*3)+4]; // alpha??
+	// int32
+	GLuint depth_buffer[YGL_MAX_BUFFER_HEIGHT*YGL_MAX_BUFFER_WIDTH+4];
+
+	GLubyte z_test_mask;
+	GLboolean z_write_mask;
+
+	GLubyte rgba_write_mask;
 // 	GLubyte depth_buffer[YGL_MAX_BUFFER_HEIGHT][YGL_MAX_BUFFER_WIDTH];
 // 	GLubyte alpha_buffer[YGL_MAX_BUFFER_HEIGHT][YGL_MAX_BUFFER_WIDTH];
 	//GLubyte stencil_buffer[][][3];
 
-	/*inline */void plot(GLint x,GLint y,GLfloat* col)
+	// todo: mask
+	/*inline */void plot(GLint x,GLint y,GLfloat z,GLfloat* col)
+	{
+		GLuint* dz=depth_buffer+BUFFER_INDEX_DEPTH(y,x);
+		if(SIGN_OF_FLOAT(z-*dz)&z_test_mask)
+		{
+			GLubyte* p=frame_buffer+BUFFER_INDEX_RGB(y,x);
+			*p++=YGL_COLOR_F2I(col[0]);
+			*p++=YGL_COLOR_F2I(col[1]);
+			*p++=YGL_COLOR_F2I(col[2]);
+
+			*dz=z;
+		}
+	}
+	void plot_no_ztest(GLint x,GLint y,GLfloat z,GLfloat* col)
 	{
 		GLubyte* p=frame_buffer+BUFFER_INDEX_RGB(y,x);
 		*p++=YGL_COLOR_F2I(col[0]);
 		*p++=YGL_COLOR_F2I(col[1]);
 		*p++=YGL_COLOR_F2I(col[2]);
+		depth_buffer[BUFFER_INDEX_DEPTH(y,x)]=z;
+	}
+	void plot_ubytef(GLint x,GLint y,GLfloat z,GLfloat* col)
+	{
+		GLuint* dz=depth_buffer+BUFFER_INDEX_DEPTH(y,x);
+		if(SIGN_OF_FLOAT(z-*dz)&z_test_mask)
+		{
+			GLubyte* p=frame_buffer+BUFFER_INDEX_RGB(y,x);
+			*p++=(int)(col[0]);
+			*p++=(int)(col[1]);
+			*p++=(int)(col[2]);
+
+			*dz=z;
+		}
+	}
+	void plot_ubytef_no_ztest(GLint x,GLint y,GLfloat z,GLfloat* col)
+	{
+		GLubyte* p=frame_buffer+BUFFER_INDEX_RGB(y,x);
+		*p++=(int)(col[0]);
+		*p++=(int)(col[1]);
+		*p++=(int)(col[2]);
+		depth_buffer[BUFFER_INDEX_DEPTH(y,x)]=z;
+	}
+	void plot_ubyte(GLint x,GLint y,GLfloat z,GLubyte* col)
+	{
+		GLuint* dz=depth_buffer+BUFFER_INDEX_DEPTH(y,x);
+		if(SIGN_OF_FLOAT(z-*dz)&z_test_mask)
+		{
+			GLubyte* p=frame_buffer+BUFFER_INDEX_RGB(y,x);
+			*p++=*col++;
+			*p++=*col++;
+			*p++=*col++;
+
+			*dz=z;
+		}
+	}
+	void plot_ubyte_no_ztest(GLint x,GLint y,GLfloat z,GLubyte* col)
+	{
+		GLubyte* p=frame_buffer+BUFFER_INDEX_RGB(y,x);
+		*p++=*col++;
+		*p++=*col++;
+		*p++=*col++;
+		depth_buffer[BUFFER_INDEX_DEPTH(y,x)]=z;
 	}
 	GLubyte* framebuf_ptr(GLint x,GLint y)
 	{
 		return frame_buffer+BUFFER_INDEX_RGB(y,x);
 	}
+	GLuint* depthbuf_ptr(GLint x,GLint y)
+	{
+		return depth_buffer+BUFFER_INDEX_DEPTH(y,x);
+	}
 
-// 	void clear_depth()
-// 	{
-// 
-// 	}
+	void clear_depth(GLuint d)
+	{
+		GLuint* p=depth_buffer,*pend=depth_buffer+(buffer_height*buffer_line_width);
+		while(p<pend)
+			*p++=d;
+	}
 
 	void clear_color(GLfloat rf,GLfloat gf,GLfloat bf)
 	{
@@ -58,10 +129,10 @@ namespace buffer
 // 				*p++=g;
 // 				*p++=b;
 // 			}
-		for(int y=0;y<YGL_MAX_BUFFER_HEIGHT;++y)
+		for(int y=0;y<buffer_height;++y)
 		{
 			p=frame_buffer+BUFFER_INDEX_RGB(y,0);
-			for(int x=0;x<YGL_MAX_BUFFER_WIDTH;++x)
+			for(int x=0;x<buffer_line_width;++x)
 			{
 				
 				*p++=r;
@@ -81,7 +152,18 @@ namespace buffer
 
 	void resize(int w,int h)
 	{
+		buffer_height=YGL_CLAMP_MAX(h,YGL_MAX_BUFFER_HEIGHT);
 		buffer_line_width=YGL_CLAMP_MAX(w,YGL_MAX_BUFFER_WIDTH);
 		buffer_line_bytes_rgb=BUFFER_ALIGN_BY_4BYTES_SIZE(buffer_line_width*3);
+	}
+
+	namespace fragment
+	{
+		void plot(GLubyte* cbuf,GLubyte* col)
+		{
+			*cbuf++=*col++;
+			*cbuf++=*col++;
+			*cbuf++=*col++;
+		}
 	}
 }

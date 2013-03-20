@@ -8,9 +8,12 @@
 	(dst)->##comp##[2]=lerp((va)->##comp##[2],(vb)->##comp##[2],f);\
 	(dst)->##comp##[3]=lerp((va)->##comp##[3],(vb)->##comp##[3],f);
 
+//#define IMAGE_PLANE_LERP_TO_WORLD_LERP(u,z1,z2) ((u)*(z1)/((z2)+(u)*((z1)-(z2))))
+#define IMAGE_PLANE_LERP_TO_WORLD_LERP(u,z1,z2) (u)
+
 namespace clip
 {
-	// liang-barsky
+	// liang-barsky blinn
 	GLboolean line(const Vertex* a,const Vertex* b,Vertex* clip_buf)
 	{
 		GLfloat/*double*/ u1=0.0,u2=1.0,r;
@@ -20,12 +23,13 @@ namespace clip
 		//x
 		//y
 		//z
-		aBC[0]=a->p[3]-a->p[0];aBC[1]=a->p[0]+a->p[3];
-		aBC[2]=a->p[3]-a->p[1];aBC[3]=a->p[1]+a->p[3];
-		aBC[4]=a->p[3]-a->p[2];aBC[5]=a->p[2]+a->p[3];
-		bBC[0]=b->p[3]-b->p[0];bBC[1]=b->p[0]+b->p[3];
-		bBC[2]=b->p[3]-b->p[1];bBC[3]=b->p[1]+b->p[3];
-		bBC[4]=b->p[3]-b->p[2];bBC[5]=b->p[2]+b->p[3];
+		aBC[0]=W_OF(a->p)-X_OF(a->p);aBC[1]=W_OF(a->p)+X_OF(a->p);
+		aBC[2]=W_OF(a->p)-Y_OF(a->p);aBC[3]=W_OF(a->p)+Y_OF(a->p);
+		aBC[4]=W_OF(a->p)-Z_OF(a->p);aBC[5]=W_OF(a->p)+Z_OF(a->p);
+
+		bBC[0]=W_OF(b->p)-X_OF(b->p);bBC[1]=W_OF(b->p)+X_OF(b->p);
+		bBC[2]=W_OF(b->p)-Y_OF(b->p);bBC[3]=W_OF(b->p)+Y_OF(b->p);
+		bBC[4]=W_OF(b->p)-Z_OF(b->p);bBC[5]=W_OF(b->p)+Z_OF(b->p);
 
 		int aOutCode=((aBC[0]<0)<<5)|((aBC[1]<0)<<4)|((aBC[2]<0)<<3)|((aBC[3]<0)<<2)|
 			((aBC[4]<0)<<1)|((aBC[5]<0));
@@ -45,17 +49,21 @@ namespace clip
 			if(bBC[i]<0.0)
 			{
 				r=aBC[i]/(aBC[i]-bBC[i]);
+
 				if(r<u1) return false;
 				else if(r<u2) u2=r;
 			}
 			else if(aBC[i]<0.0)
 			{
 				r=aBC[i]/(aBC[i]-bBC[i]);
+
 				if(r>u2) return false;
 				else if(r>u1) u1=r;
 			}
-			//else		
+			//else both >=0.0
 		}
+
+		// need to perspective correct? u1 u2
 
 		// 	assert(a->coord[2]!=0);
 		// 	r=b->coord[2]/a->coord[2];
@@ -64,18 +72,10 @@ namespace clip
 		{
 			LERP_COMPONENT_4(clip_buf,p,a,b,u1);
 
+			// persp correction??
+			u1=IMAGE_PLANE_LERP_TO_WORLD_LERP(u1,W_OF(a->p),W_OF(a->p));
 			LERP_COMPONENT_4(clip_buf,col_front_pri,a,b,u1);
-			//LERP_COMPONENT_4(clip_buf[0],texc,a,b,u1);
-
-// 			t.color[0]=lerp(a->color[0],b->color[0],u1);
-// 			t.color[1]=lerp(a->color[1],b->color[1],u1);
-// 			t.color[2]=lerp(a->color[2],b->color[2],u1);
-// 			t.color[3]=lerp(a->color[3],b->color[3],u1);
-// 
-// 			t.tex_coord[0]=lerp(a->tex_coord[0],b->tex_coord[0],u1);
-// 			t.tex_coord[1]=lerp(a->tex_coord[1],b->tex_coord[1],u1);
-// 			t.tex_coord[2]=lerp(a->tex_coord[2],b->tex_coord[2],u1);
-// 			t.tex_coord[3]=lerp(a->tex_coord[3],b->tex_coord[3],u1);
+			LERP_COMPONENT_4(clip_buf,tex_coords,a,b,u1);
 		}
 		else
 		{
@@ -84,7 +84,11 @@ namespace clip
 		if(bOutCode!=0)
 		{
 			LERP_COMPONENT_4(clip_buf+1,p,a,b,u2);
-			LERP_COMPONENT_4(clip_buf+1,col_front_pri,a,b,u1);
+
+			// persp correction??
+			u2=IMAGE_PLANE_LERP_TO_WORLD_LERP(u2,W_OF(a->p),W_OF(a->p));
+			LERP_COMPONENT_4(clip_buf+1,col_front_pri,a,b,u2);
+			LERP_COMPONENT_4(clip_buf+1,tex_coords,a,b,u2);
 		}
 		else
 		{
@@ -108,6 +112,7 @@ namespace clip
 
 #define NEGATIVE_MASK 0x80
 #define _NEGATIVE_MASK 0x7f
+
 
 	GLboolean ply_by_plane(int axis,Vertex* verts,GLint vcnt,Vertex* clip_buf,GLint* clip_cnt)
 	{
@@ -143,8 +148,13 @@ clip_plane_start:
 				{
 					Assert(bc1!=bc2);
 					u=bc1/(bc1-bc2);
+
 					LERP_COMPONENT_4(&pisect,p,p1,p2,u);
+
+					// persp correction??
+					u=IMAGE_PLANE_LERP_TO_WORLD_LERP(u,W_OF(p1->p),W_OF(p2->p));
 					LERP_COMPONENT_4(&pisect,col_front_pri,p1,p2,u);
+					LERP_COMPONENT_4(&pisect,tex_coords,p1,p2,u);
 
 					*(clip_buf++)=pisect;
 				}
@@ -153,8 +163,13 @@ clip_plane_start:
 				{
 					Assert(bc1!=bc2);
 					u=bc1/(bc1-bc2);
+
 					LERP_COMPONENT_4(&pisect,p,p1,p2,u);
+
+					// persp correction??
+					u=IMAGE_PLANE_LERP_TO_WORLD_LERP(u,W_OF(p1->p),W_OF(p2->p));
 					LERP_COMPONENT_4(&pisect,col_front_pri,p1,p2,u);
+					LERP_COMPONENT_4(&pisect,tex_coords,p1,p2,u);
 
 					*(clip_buf++)=pisect;
 					*(clip_buf++)=*p2;

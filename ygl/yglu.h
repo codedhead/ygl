@@ -1,6 +1,12 @@
 #ifndef _YGL_YGLU_
 #define _YGL_YGLU_
 
+#ifndef __glu_h__
+#ifndef __GLU_H__
+
+#define __glu_h__
+#define __GLU_H__
+
 #include "ygl.h"
 
 namespace ygl{
@@ -14,11 +20,15 @@ void gluLookAt(GLdouble eyex, GLdouble eyey, GLdouble eyez, GLdouble centerx, GL
 // void gluUnProject(GLdouble winx, GLdouble winy, GLdouble winz, const GLdouble modelMatrix[16], const GLdouble projMatrix[16], const GLint viewport[4], GLdouble *objx, GLdouble *objy, GLdouble *objz);
 
 // void gluDisk(GLUquadric *qobj, GLdouble innerRadius, GLdouble outerRadius, GLint slices, GLint loops);
-// void gluSphere(GLUquadric *qobj, GLdouble radius, GLint slices, GLint stacks);
+
+// no GLUquadric support
+void gluSphere(/*GLUquadric *qobj,*/ GLdouble radius, GLint slices, GLint stacks);
 
 // void gluBeginPolygon(GLUtesselator *tess);
 // void gluBeginCurve(GLUnurbs *nobj);
 
 }
 
+#endif
+#endif
 #endif

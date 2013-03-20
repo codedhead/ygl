@@ -39,15 +39,15 @@ public:
 #endif
 		}
 		T* ret=&(free_->m);
-		// ctor??
+		// no ctor please??
 		ret->ctor();
 		free_=free_->n;
 		return ret;
 	}
 	void recycle(T* t)
 	{
-		// dtor??
-		t->~T();
+		// no dtor please??
+		// t->~T();
 		TWrap<T>* w=(TWrap<T>*)t;
 		w->n=free_;
 		free_=w;

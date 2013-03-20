@@ -2,7 +2,7 @@ thread-safe modelview matrix
 
 tri-fans same as convex polygon?
 
-add check, set error code
+add check, set error_code
 
 double or float???
 
@@ -17,15 +17,64 @@ one processor. Each scan line is independent
 remove redundant headers, like stdio.h
 merge cpp, use inline
 
+3.19
+interp between span int(left),int(right), scan between int(ymin),int(ymax) might cause the texture bilinear filter bug
+use float instead, dx, dy
+
+texture border. for GL_CLAMP on edge
+
+depth mask, color mask
+
+bitset bug
+
+3.18
+texture on back side always has an edge??
+smooth bug(must triangulation)
+clamp col_front_pri early
+
+3.17
+blending per fragment + fog
+stencil
+
+aa
+
+select feedback
+pixel,bitmap
+display list
+array, buffer
+
+3.16
+top-left?? box edge
+z-buffer how to 32bit....
+
+3.15
+// is it linear in clip space?? lerp attribs
+dont do repeated  calc, like translate fcolor to 255color first
+
+cube top face color smooth ,wrong, flash
+
+
+line clipping bug
+strips and loops, and polygons
+spheres
+
+clipping behind camera problem?? boudary width 480 (0,479), in glViewport
+
+//culling,
+// zbuffer depth test
+alpha blend, texture
+
+scanline exceptions
+mipmaping
+
 3.14
+
+some macro expand, eval too many time? efficiency, like CLAMP_MIN_MAX
 
 clipspace 0,0,0 1,1,1 more efficient?
 
-scanline exceptions
-clipping
-lighting, smooth shading
-zbuffer, culling
-texture, mipmaping
+lighting, 
+
 
 anti alias (line, with width, point)
 http://blog.csdn.net/he_wen_jian/article/details/8563864

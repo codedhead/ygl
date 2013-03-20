@@ -7,6 +7,9 @@ using namespace ygl;
 
 namespace clip
 {
+	// is it linear in clip space??
+	// that is : is the calced u wrt homogeneous coord
+
 	GLboolean line(const Vertex* const a,const Vertex* const b,Vertex* clip_buf);
 	GLboolean point(const Vertex* vert);
 	// result store in clip_buf

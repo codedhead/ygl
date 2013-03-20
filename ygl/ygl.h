@@ -1,6 +1,12 @@
 #ifndef _YGL_YGL_
 #define _YGL_YGL_
 
+#ifndef __gl_h_
+#ifndef __GL_H__
+
+#define __gl_h_
+#define __GL_H__
+
 #include "ygltypes.h"
 
 namespace ygl{
@@ -736,9 +742,9 @@ inline void glMultiTexCoord2fv(GLenum tex, const GLfloat*v){ glMultiTexCoord4f(t
 inline void glMultiTexCoord3fv(GLenum tex, const GLfloat*v){ glMultiTexCoord4f(tex,v[0],v[1],v[2],1.f); }
 
 // void glIndexf(GLfloat c);
-
+// not in 1.1
 // void glFogCoordf(GLfloat f);
-// #define glFogCoordfv(v) glFogCoordf(*(v))
+// inline void glFogCoordfv(GLfloat* v){ glFogCoordf(*v); }
 
 void glEdgeFlag(GLboolean flag);
 
@@ -801,21 +807,42 @@ void glScalef(GLfloat x, GLfloat y, GLfloat z);
 */
 
 void glFrontFace(GLenum mode);
-void glShadeModel(GLenum mode);
 void glCullFace(GLenum mode);
+void glShadeModel(GLenum mode);
 void glDepthRange(GLclampd n, GLclampd f);
+
+void glDepthFunc(GLenum func);
+void glDepthMask(GLboolean flag);
 
 void glClear(GLbitfield mask);
 void glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
+void glClearDepth(GLclampd depth);
 void glFlush();
 void glFinish();
 
 /* texture */
+void glGenTextures(GLsizei n, GLuint *textures);
+void glDeleteTextures(GLsizei n, const GLuint *textures);
+void glBindTexture(GLenum target, GLuint texture);
+void glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void glTexParameteri(GLenum target, GLenum pname, GLint param);
+void glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params);
+void glTexEnvi(GLenum target, GLenum pname, GLint param);
+void glTexEnvfv(GLenum target, GLenum pname, GLfloat* params);
+//void glTexGeni(GLenum coord, GLenum pname, GLint param);
 
+/* fog */
+void glFogi(GLenum pname, GLint param);
+void glFogfv(GLenum pname, const GLfloat *params);
 
-void glTexGenf(GLenum coord, GLenum pname, GLfloat param);
-void glTexGenfv(GLenum coord, GLenum pname, const GLfloat *params);
+// ALERT!! from 1.3??
+void glGenerateMipmap(GLenum target);
+
+//void glTexGenf(GLenum coord, GLenum pname, GLfloat param);
+//void glTexGenfv(GLenum coord, GLenum pname, const GLfloat *params);
 
 }//end namespace
 
+#endif
+#endif
 #endif

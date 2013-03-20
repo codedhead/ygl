@@ -3,6 +3,7 @@
 
 namespace ygl{
 
+typedef void			GLvoid;
 typedef bool			GLboolean;
 typedef char			GLbyte;
 typedef unsigned char	GLubyte;
