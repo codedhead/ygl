@@ -159,12 +159,12 @@ void do_lighting(Vertex* vert,const Normal& nrm)
 		glctx.material_front.ambient[2]*glctx.light_model.ambient_scene[2];
 
 	vert->col_front_pri[3]=glctx.material_front.diffuse[3];
-	ASSIGN_F4_WITH(vert->col_front_sec,0.f,0.f,0.f,1.f);
+	ASSIGN_V4_WITH(vert->col_front_sec,0.f,0.f,0.f,1.f);
 
 	if(glctx.light_model.two_sided)
 	{
 		vert->col_back_pri[3]=glctx.material_back.diffuse[3];
-		ASSIGN_F4_WITH(vert->col_back_sec,0.f,0.f,0.f,1.f);
+		ASSIGN_V4_WITH(vert->col_back_sec,0.f,0.f,0.f,1.f);
 		/*
 		vert->col_back_pri[0]=glctx.material_back.emission[0]+
 			glctx.material_back.ambient[0]*glctx.light_model.ambient_scene[0];
@@ -208,7 +208,7 @@ void do_lighting(Vertex* vert,const Normal& nrm)
 				{
 					glctx.lights[i].lit_spec(vert,nrm,view,glctx.material_front);
 				}
-			ASSIGN_F4(vert->col_back_sec,vert->col_front_sec);
+			ASSIGN_V4(vert->col_back_sec,vert->col_front_sec);
 			
 		}*/
 	}

@@ -17,6 +17,16 @@
 #define FLOAT_LE_0 4
 #define FLOAT_ALWAYS (FLOAT_EQ_0|FLOAT_GT_0|FLOAT_LE_0)
 
+//#define SUB_AS_INT(a,b) (((int)(a))-((int)(b)))
+
+#define COMPARE_UINT(a,b) ((a)==(b)?1:((a)>(b)?2:4))
+inline int compare_uint32(unsigned int a,unsigned int b)
+{
+	return COMPARE_UINT(a,b);
+}
+
+#define BIT_MASK(a,b,mask) ( ((a) & ~(mask)) | ((b) & (mask)) )
+
 // assume int 32
 // return 0 for 0.0, 1 for positive, 2 for negative
 #define FLOAT_AS_INT(f) (*((unsigned int*)&f))
@@ -25,20 +35,20 @@
 // 	((   FLOAT_AS_INT(f) & 0x7FFFFFFF)==0)?1:(\
 // 		2 << ( FLOAT_AS_INT(f) & 0x80000000) >> 31 )\
 // 	))
-inline int SIGN_OF_FLOAT(float f)
-{
-	return (
-		((   FLOAT_AS_INT(f) & 0x7FFFFFFF)==0)?1:
-		( 2 << (( FLOAT_AS_INT(f) & 0x80000000) >> 31) )
-		);
-}
-inline int SIGN_OF_DOUBLE(double f)
-{
-	return (
-		( f==0.0 )?1:
-		( 2 << ( *((unsigned long long*)&f) >> 63) )
-		);
-}
+// inline int SIGN_OF_FLOAT(float f)
+// {
+// 	return (
+// 		((   FLOAT_AS_INT(f) & 0x7FFFFFFF)==0)?1:
+// 		( 2 << (( FLOAT_AS_INT(f) & 0x80000000) >> 31) )
+// 		);
+// }
+// inline int SIGN_OF_DOUBLE(double f)
+// {
+// 	return (
+// 		( f==0.0 )?1:
+// 		( 2 << ( *((unsigned long long*)&f) >> 63) )
+// 		);
+// }
 // inline int fast_sign_of(float f)
 // {
 // 	if (((int&)f & 0x7FFFFFFF)==0) return 0; // test exponent & mantissa bits: is input zero?
@@ -46,13 +56,15 @@ inline int SIGN_OF_DOUBLE(double f)
 // }
 
 // todo: sse??
-#define ASSIGN_F4(a,b) {(a)[0]=(b)[0];(a)[1]=(b)[1];(a)[2]=(b)[2];(a)[3]=(b)[3];}
-#define ASSIGN_F3_WITH(v,a,b,c) {(v)[0]=a;(v)[1]=b;(v)[2]=c;}
-#define ASSIGN_F4_WITH(v,a,b,c,d) {(v)[0]=a;(v)[1]=b;(v)[2]=c;(v)[3]=d;}
+#define ASSIGN_V4(a,b) {(a)[0]=(b)[0];(a)[1]=(b)[1];(a)[2]=(b)[2];(a)[3]=(b)[3];}
+#define ASSIGN_V3_WITH(v,a,b,c) {(v)[0]=a;(v)[1]=b;(v)[2]=c;}
+#define ASSIGN_V4_WITH(v,a,b,c,d) {(v)[0]=a;(v)[1]=b;(v)[2]=c;(v)[3]=d;}
 
-// #define ASSIGN_XYZW(v) ASSIGN_F4_WITH(v,x,y,z,w)
+#define YGL_V4_LIST_COMPONENTS(v) (v)[0],(v)[1],(v)[2],(v)[3]
+
+// #define ASSIGN_XYZW(v) ASSIGN_V4_WITH(v,x,y,z,w)
 // #define ASSIGN_RGB(c) {(c)[0]=r;(c)[1]=g;(c)[2]=b;}
-// #define ASSIGN_RGBA(v) ASSIGN_F4_WITH(v,r,g,b,a)
+// #define ASSIGN_RGBA(v) ASSIGN_V4_WITH(v,r,g,b,a)
 
 #define GL_ODD true
 #define GL_EVEN false
@@ -105,6 +117,15 @@ inline float lerp(float a,float b,float f)
 // inline double lerp(double a,double b,double f)
 // {
 // 	return (1.0-f)*a+f*b;
+// }
+
+
+
+// inline int SIGN_OF_INT32(int i)
+// {
+// 	return (
+// 		( i==0 )?1:( 2 << ( i>>31 ) )
+// 		);
 // }
 
 #endif

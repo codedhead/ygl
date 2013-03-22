@@ -9,12 +9,24 @@
 #include "texture.h"
 #include "bitset.h"
 
-#define YGL_IS_FLAG_ENABLED(flags,which) ((flags)&(((unsigned long long)1)<<(which)))
-#define YGL_IS_ENABLED(which) (glctx.enable_flags&(((unsigned long long)1)<<(which)))
-#define YGL_SET_ENABLED_FLAG(flags,which) flags|=(((unsigned long long)1)<<(which));
-#define YGL_CLEAR_ENABLED_FLAG(flags,which) flags&=~(((unsigned long long)1)<<(which));
+//#define YGL_IS_FLAG_ENABLED(flags,which) ((flags)&(((unsigned long long)1)<<(which)))
 
-#define YGL_IS_LIGHT_ENABLED(which) (glctx.lighti_enable&(1<<(which)))
+
+#define YGL_SET_ENABLED_FLAG_INT64(flags,which) flags|=(((unsigned long long)1)<<(which));
+#define YGL_CLEAR_ENABLED_FLAG_INT64(flags,which) flags&=~(((unsigned long long)1)<<(which));
+
+#define YGL_SET_ENABLED_FLAG(flags,which) flags|=(((GLuint)1)<<(which));
+#define YGL_CLEAR_ENABLED_FLAG(flags,which) flags&=~(((GLuint)1)<<(which));
+#define YGL_IS_FLAG_ENABLED(flags,which) ((flags)&(((GLuint)1)<<(which)))
+
+#define YGL_ENABLE(which) YGL_SET_ENABLED_FLAG_INT64(glctx.enable_flags,which)
+#define YGL_DISABLE(which) YGL_CLEAR_ENABLED_FLAG_INT64(glctx.enable_flags,which)
+#define YGL_IS_ENABLED(which) (glctx.enable_flags&(((unsigned long long)1)<<(which)))
+
+
+//#define YGL_IS_LIGHT_ENABLED(which) (glctx.lighti_enable&(((GLuint)1)<<(which)))
+#define YGL_IS_LIGHT_ENABLED(which) YGL_IS_FLAG_ENABLED(glctx.lighti_enable,which)
+#define YGL_IS_CLIENTSTATE_ENABLED(which) YGL_IS_FLAG_ENABLED(glctx.client_state,which)
 // #define YGL_SET_LIGHT_ENABLED_FLAG(which) glctx.lighti_enable|=(1<<(which));
 // #define YGL_CLEAR_LIGHT_ENABLED_FLAG(which) glctx.lighti_enable&=~(1<<(which));
 
@@ -82,10 +94,19 @@ struct GLContext
 	GLfloat cur_tex_coord[4];
 	Normal cur_normal/*[3]*/;
 	GLfloat cur_color[4];
-	GLfloat cur_secondary_color[4]; // specular
+	//GLfloat cur_secondary_color[4]; // specular
 	//GLfloat cur_fog_coord;
 	//GLfloat cur_color_index;
 	GLboolean cur_edge_flag;// move to flags
+
+	GLuint client_state;
+	struct ClientArray
+	{
+		GLint size;
+		GLenum type;
+		GLsizei stride;
+		const GLvoid* pointer;
+	}client_arrays[YGL_CLIENT_ARRAY_MAX];
 
 	// viewport
 	struct  
@@ -134,17 +155,9 @@ struct GLContext
 	GLubyte shade_model;
 
 
-	GLfloat clear_color[4];
-	// 32
-	GLuint clear_depth;
-
 	unsigned long long enable_flags;
 	//GLuint flags;
 	GLuint last_error;
-
-	// depth
-	GLubyte depth_test_mask;
-	GLubyte buffer_write_mask;
 
 	// texture
 	bitset<YGL_TEXTURE_NAMES_MAX> tex_names;
@@ -160,6 +173,26 @@ struct GLContext
 	GLfloat fog_density,fog_end,fog_start;
 	GLfloat fog_color[4];
 	GLfloat cached_fog_e_s; // inv(e-s)
+
+	// fragment op && buffer
+	GLint scissor_left,scissor_bottom,scissor_right,scissor_top;
+	GLubyte depth_test_mask; // converted from DepthFunc
+	GLubyte alpha_test_mask; // converted from AlphaFunc
+	cbuf_type alpha_ref; 
+	GLubyte stencil_test_mask; // converted from StencilFunc
+	sbuf_type stencil_ref;
+	GLuint stencil_mask;
+	GLenum stencil_op_sfail,stencil_op_dpfail,stencil_op_dppass;
+	GLenum blend_sfactor,blend_dfactor;
+	GLenum logicop;
+
+	cbuf_type clear_color[4];
+	zbuf_type clear_depth;
+	sbuf_type clear_stencil;
+
+	
+	
+	//GLubyte buffer_write_mask;
 
 	// cached values
 	GLboolean cached_mv_inverse_valid;

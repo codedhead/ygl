@@ -20,7 +20,7 @@ void TextureObject::ctor()
 // 	filter_min=GL_NEAREST_MIPMAP_LINEAR;
 	filter_min=filter_mag=GL_NEAREST;
 	wrap_s=wrap_t=GL_REPEAT;
-	ASSIGN_F4_WITH(border_color,0.f,0.f,0.f,0.f);
+	ASSIGN_V4_WITH(border_color,0.f,0.f,0.f,0.f);
 	
 	dimension=0;//???
 	memset(mipmaps,0,sizeof(mipmaps));
@@ -37,7 +37,7 @@ void TextureObject::fetch(GLfloat s,GLfloat t,GLfloat* res)
 	const GLvoid* pixels=img->pixels;
 	if(!pixels)
 	{
-		ASSIGN_F3_WITH(res,0.f,0.f,0.f);
+		ASSIGN_V4_WITH(res,0.f,0.f,0.f,0.f);
 		return;
 	}
 	//s->x, t->y

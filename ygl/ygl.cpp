@@ -94,7 +94,7 @@ GLContext::GLContext()
 
 
 	// clear value
-	ASSIGN_F4_WITH(clear_color,0.f,0.f,0.f,0.f);
+	ASSIGN_V4_WITH(clear_color,0.f,0.f,0.f,0.f);
 	clear_depth=YGL_DEPTH_BUFFER_MAX_RES;//*1.f;
 
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -106,15 +106,15 @@ GLContext::GLContext()
 	// vertex data
 // 	cur_tex_coord.s=cur_tex_coord.t=cur_tex_coord.r=0.f;
 // 	cur_tex_coord.q=1.f;
-	ASSIGN_F4_WITH(cur_tex_coord,0.f,0.f,0.f,1.f);
+	ASSIGN_V4_WITH(cur_tex_coord,0.f,0.f,0.f,1.f);
 
 	cur_normal[0]=cur_normal[1]=0.f;
 	cur_normal[2]=1.f;
 
 	cur_color[0]=cur_color[1]=cur_color[2]=cur_color[3]=1.f;
 
-	cur_secondary_color[0]=cur_secondary_color[1]=cur_secondary_color[2]=0.f;
-	cur_secondary_color[3]=1.f;
+// 	cur_secondary_color[0]=cur_secondary_color[1]=cur_secondary_color[2]=0.f;
+// 	cur_secondary_color[3]=1.f;
 
 	cur_edge_flag=true;// move to flags
 
@@ -124,6 +124,7 @@ GLContext::GLContext()
 	// 		line_stipple=0xffff;
 	// 		line_stipple_repcnt=1;line_stipple_cnter=0;
 
+	// todo: init
 	enable_flags=0;
 
 	cull_face_mode=YGL_BACK;
@@ -133,23 +134,18 @@ GLContext::GLContext()
 	color_material_face=YGL_FRONT_AND_BACK;
 	color_material_mode=GL_AMBIENT_AND_DIFFUSE;
 
+	lighti_enable=0;
 	// light 0
-	ASSIGN_F4_WITH(lights[0].diffuse,1.f,1.f,1.f,1.f);
-	ASSIGN_F4_WITH(lights[0].specular,1.f,1.f,1.f,1.f);
+	ASSIGN_V4_WITH(lights[0].diffuse,1.f,1.f,1.f,1.f);
+	ASSIGN_V4_WITH(lights[0].specular,1.f,1.f,1.f,1.f);
 	
-	ASSIGN_F4_WITH(light_model.ambient_scene,0.2f,0.2f,0.2f,1.f);
+	ASSIGN_V4_WITH(light_model.ambient_scene,0.2f,0.2f,0.2f,1.f);
 	light_model.local_viewer=false;
 	light_model.two_sided=false;
 	// color control
 
 	//caching
 	cached_mv_inverse_valid=true; // identity
-
-	//depth test
-	buffer::z_test_mask=FLOAT_ALWAYS;
-	depth_test_mask=FLOAT_LE_0;//GL_LESS;
-	YGL_SET_ENABLED_FLAG(buffer_write_mask,YGL_DEPTH_WRITE);
-	buffer::z_write_mask=true;
 
 	// texture
 	tex_names.set(0);// reserve 0??
@@ -158,14 +154,41 @@ GLContext::GLContext()
 	tex_targets[YGL_TEX_TARGET_1D]=tex_objs[0];
 	tex_targets[YGL_TEX_TARGET_2D]=tex_objs[0];
 	tex_env_mode=GL_MODULATE;
-	ASSIGN_F4_WITH(tex_env_color,0.f,0.f,0.f,0.f);
+	ASSIGN_V4_WITH(tex_env_color,0.f,0.f,0.f,0.f);
 
 	// fog
 	fog_mode=GL_EXP;
 	// fog_source=GL_FRAGMENT_DEPTH;
 	fog_density=fog_end=1.f;fog_start=0.f;
-	ASSIGN_F4_WITH(fog_color,0.f,0.f,0.f,0.f);
+	ASSIGN_V4_WITH(fog_color,0.f,0.f,0.f,0.f);
 	cached_fog_e_s=1.f;
+
+
+	//buffer::z_test_mask=FLOAT_ALWAYS;
+//	YGL_SET_ENABLED_FLAG(buffer_write_mask,YGL_DEPTH_WRITE);
+	//buffer::z_write_mask=true;
+
+	// fragment op
+	scissor_left=scissor_bottom=0;
+	scissor_right=YGL_MAX_BUFFER_WIDTH; // size of GL window? violate specification
+	scissor_top=YGL_MAX_BUFFER_HEIGHT;
+	depth_test_mask=FLOAT_LE_0;//GL_LESS;
+	alpha_test_mask=FLOAT_ALWAYS;//GL_ALWAYS
+	alpha_ref=0; 
+	stencil_test_mask=FLOAT_ALWAYS;//GL_ALWAYS
+	stencil_ref=0;
+	stencil_mask=0xffffffff;
+	stencil_op_sfail=stencil_op_dpfail=stencil_op_dppass=GL_KEEP;
+	blend_sfactor=GL_ONE;
+	blend_dfactor=GL_ZERO;
+	logicop=GL_COPY;
+
+	// client state
+	memset(client_arrays,0,sizeof(client_arrays));
+	client_state=0;
+	client_arrays[YGL_EDGE_FLAG_ARRAY].size=1;
+	//client_arrays[YGL_EDGE_FLAG_ARRAY].type=GL_BOOL;
+	client_arrays[YGL_NORMAL_ARRAY].size=3;
 }
 
 // void GLContext::init(GLint width, GLint height)
@@ -276,11 +299,12 @@ inline GLfloat signed_area(Vertex* verts,int vcnt)
 		DO_CULL_AND_SCANLINE;\
 	}
 
-#define LINE_RASTERIZE \
-	{if(glctx.shade_model==YGL_SMOOTH)\
-		raster::line_smooth(clip_buf);\
-	else\
-		raster::line(clip_buf);}
+// #define LINE_RASTERIZE \
+// 	{if(glctx.shade_model==YGL_SMOOTH)\
+// 		raster::line_smooth(clip_buf);\
+// 	else\
+// 		raster::line(clip_buf);}
+#define LINE_RASTERIZE raster::line(clip_buf);
 
 
 void glEnable(GLenum cap)
@@ -290,10 +314,10 @@ void glEnable(GLenum cap)
 	switch(cap)
 	{
 	case GL_LIGHTING:
-		YGL_SET_ENABLED_FLAG(glctx.enable_flags,YGL_LIGHTING);
+		YGL_ENABLE(YGL_LIGHTING);
 		break;
 	case GL_COLOR_MATERIAL:
-		YGL_SET_ENABLED_FLAG(glctx.enable_flags,YGL_COLOR_MATERIAL);
+		YGL_ENABLE(YGL_COLOR_MATERIAL);
 		break;
 	case GL_LIGHT0:
 	case GL_LIGHT1:
@@ -306,18 +330,41 @@ void glEnable(GLenum cap)
 		YGL_SET_ENABLED_FLAG(glctx.lighti_enable,cap-GL_LIGHT0);
 		break;
 	case GL_CULL_FACE:
-		YGL_SET_ENABLED_FLAG(glctx.enable_flags,YGL_CULL_FACE);
+		YGL_ENABLE(YGL_CULL_FACE);
+		break;
+	case GL_SCISSOR_TEST:
+		YGL_ENABLE(YGL_DEPTH_TEST);
+		buffer::test_scissor=true;
+		break;
+	case GL_ALPHA_TEST:
+		YGL_ENABLE(YGL_ALPHA_TEST);
+		buffer::test_alpha=true;
+		break;
+	case GL_STENCIL_TEST:
+		YGL_ENABLE(YGL_STENCIL_TEST);
+		buffer::test_stencil=true;
 		break;
 	case GL_DEPTH_TEST:
-		YGL_SET_ENABLED_FLAG(glctx.enable_flags,YGL_DEPTH_TEST);
-		buffer::z_test_mask=glctx.depth_test_mask;
-		buffer::z_write_mask=YGL_IS_FLAG_ENABLED(glctx.buffer_write_mask,YGL_DEPTH_WRITE);
+		YGL_ENABLE(YGL_DEPTH_TEST);
+		buffer::test_depth=true;
+// 		buffer::z_test_mask=glctx.depth_test_mask;
+// 		buffer::z_write_mask=YGL_IS_FLAG_ENABLED(glctx.buffer_write_mask,YGL_DEPTH_WRITE);
+		break;
+	case GL_BLEND:
+		YGL_ENABLE(YGL_BLEND);
+		buffer::enabled_blend=true;
+		break;
+	case GL_COLOR_LOGIC_OP:
+	case GL_LOGIC_OP: // merge with GL_COLOR_LOGIC_OP
+		YGL_ENABLE(YGL_LOGIC_OP);
+		YGL_ENABLE(YGL_COLOR_LOGIC_OP);
+		buffer::enabled_logicop=true;
 		break;
 	case GL_NORMALIZE:
-		YGL_SET_ENABLED_FLAG(glctx.enable_flags,YGL_NORMALIZE);
+		YGL_ENABLE(YGL_NORMALIZE);
 		break;
 	case GL_TEXTURE_2D:
-		YGL_SET_ENABLED_FLAG(glctx.enable_flags,YGL_TEXTURE_2D);
+		YGL_ENABLE(YGL_TEXTURE_2D);
 		break;
 	}
 	
@@ -329,10 +376,10 @@ void glDisable(GLenum cap)
 	switch(cap)
 	{
 	case GL_LIGHTING:
-		YGL_CLEAR_ENABLED_FLAG(glctx.enable_flags,YGL_LIGHTING);
+		YGL_DISABLE(YGL_LIGHTING);
 		break;
 	case GL_COLOR_MATERIAL:
-		YGL_CLEAR_ENABLED_FLAG(glctx.enable_flags,YGL_COLOR_MATERIAL);
+		YGL_DISABLE(YGL_COLOR_MATERIAL);
 		break;
 	case GL_LIGHT0:
 	case GL_LIGHT1:
@@ -345,66 +392,44 @@ void glDisable(GLenum cap)
 		YGL_CLEAR_ENABLED_FLAG(glctx.lighti_enable,cap-GL_LIGHT0);
 		break;
 	case GL_CULL_FACE:
-		YGL_CLEAR_ENABLED_FLAG(glctx.enable_flags,YGL_CULL_FACE);
+		YGL_DISABLE(YGL_CULL_FACE);
+		break;
+	case GL_SCISSOR_TEST:
+		YGL_DISABLE(YGL_DEPTH_TEST);
+		buffer::test_scissor=false;
+		break;
+	case GL_ALPHA_TEST:
+		YGL_DISABLE(YGL_ALPHA_TEST);
+		buffer::test_alpha=false;
+		break;
+	case GL_STENCIL_TEST:
+		YGL_DISABLE(YGL_STENCIL_TEST);
+		buffer::test_stencil=false;
 		break;
 	case GL_DEPTH_TEST:
-		YGL_CLEAR_ENABLED_FLAG(glctx.enable_flags,YGL_DEPTH_TEST);
-		buffer::z_test_mask=FLOAT_ALWAYS;
-		buffer::z_write_mask=false; // write not allowed
+		YGL_DISABLE(YGL_DEPTH_TEST);
+		buffer::test_depth=false;
+// 		buffer::z_test_mask=FLOAT_ALWAYS;
+// 		buffer::z_write_mask=false; // write not allowed
+		break;
+	case GL_BLEND:
+		YGL_DISABLE(YGL_BLEND);
+		buffer::enabled_blend=false;
+		break;
+	case GL_COLOR_LOGIC_OP:
+	case GL_LOGIC_OP: // merge with GL_COLOR_LOGIC_OP
+		YGL_DISABLE(YGL_LOGIC_OP);
+		YGL_DISABLE(YGL_COLOR_LOGIC_OP);
+		buffer::enabled_logicop=false;
 		break;
 	case GL_NORMALIZE:
-		YGL_CLEAR_ENABLED_FLAG(glctx.enable_flags,YGL_NORMALIZE);
+		YGL_DISABLE(YGL_NORMALIZE);
 		break;
 	case GL_TEXTURE_2D:
-		YGL_CLEAR_ENABLED_FLAG(glctx.enable_flags,YGL_TEXTURE_2D);
+		YGL_DISABLE(YGL_TEXTURE_2D);
 		break;
 	}
 
-}
-void glDepthFunc(GLenum func)
-{
-	switch(func)
-	{
-	case GL_NEVER:
-		glctx.depth_test_mask=0;
-		break;
-	case GL_ALWAYS:
-		glctx.depth_test_mask=(FLOAT_EQ_0|FLOAT_LE_0|FLOAT_GT_0);
-		break;
-	case GL_LESS:
-		glctx.depth_test_mask=(FLOAT_LE_0);
-		break;
-	case GL_LEQUAL:
-		glctx.depth_test_mask=(FLOAT_EQ_0|FLOAT_LE_0);
-		break;
-	case GL_EQUAL:
-		glctx.depth_test_mask=(FLOAT_EQ_0);
-		break;
-	case GL_GREATER:
-		glctx.depth_test_mask=(FLOAT_GT_0);
-		break;
-	case GL_NOTEQUAL:
-		glctx.depth_test_mask=(FLOAT_LE_0|FLOAT_GT_0);
-		break;
-	case GL_GEQUAL:
-		glctx.depth_test_mask=(FLOAT_EQ_0|FLOAT_GT_0);
-		break;
-	}
-	buffer::z_test_mask=(YGL_IS_ENABLED(YGL_DEPTH_TEST)?glctx.depth_test_mask:FLOAT_ALWAYS);
-}
-void glDepthMask(GLboolean flag)
-{
-	if(flag)
-	{
-		YGL_SET_ENABLED_FLAG(glctx.buffer_write_mask,YGL_DEPTH_WRITE);
-	}
-	else
-	{
-		YGL_CLEAR_ENABLED_FLAG(glctx.buffer_write_mask,YGL_DEPTH_WRITE);
-	}
-
-	buffer::z_write_mask=(YGL_IS_ENABLED(YGL_DEPTH_TEST)?flag:false);
-	//_NOT_IMPLEMENTED_(glDepthMask);
 }
 void glFrontFace(GLenum mode)
 {
@@ -434,21 +459,6 @@ void glDepthRange(GLclampd n, GLclampd f)
 	// n can > f
 	glctx.znear=YGL_CLAMP_MIN_MAX(n,0.f,1.f);
 	glctx.zfar=YGL_CLAMP_MIN_MAX(f,0.f,1.f);
-}
-void glClear(GLbitfield mask)
-{
-	if(mask&GL_COLOR_BUFFER_BIT)
-		buffer::clear_color(glctx.clear_color[0],glctx.clear_color[1],glctx.clear_color[2]);
-	if(mask&GL_DEPTH_BUFFER_BIT)
-		buffer::clear_depth(glctx.clear_depth);
-}
-void glClearColor(GLclampf r, GLclampf g, GLclampf b, GLclampf a)
-{
-	ASSIGN_F4_WITH(glctx.clear_color,r,g,b,a);
-}
-void glClearDepth(GLclampd depth)
-{
-	glctx.clear_depth=(YGL_DEPTH_BUFFER_MAX_RES)*YGL_CLAMP_MIN_MAX(depth,0.,1.);
 }
 void glFlush()
 {
@@ -551,7 +561,7 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 	CHECK_IS_IN_BEGIN
 
 	Vertex newv;
-	ASSIGN_F4_WITH(newv.p,x,y,z,w);
+	ASSIGN_V4_WITH(newv.p,x,y,z,w);
 
 	// mv matrix and lighting
 	Matrix44* mvmat=glctx.matrix_mv.peek();
@@ -572,11 +582,11 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 	}
 	else
 	{
-		ASSIGN_F4(newv.col_front_pri,glctx.cur_color);
+		ASSIGN_V4(newv.col_front_pri,glctx.cur_color);
 	}
 
 	// tex coord
-	ASSIGN_F4(newv.tex_coords,glctx.cur_tex_coord);
+	ASSIGN_V4(newv.tex_coords,glctx.cur_tex_coord);
 
 	// projection -1,1
 	glctx.matrix_proj.peek()->onP(newv.p);
@@ -701,7 +711,7 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 
 void glColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
 {
-	ASSIGN_F4_WITH(glctx.cur_color,r,g,b,a);
+	ASSIGN_V4_WITH(glctx.cur_color,r,g,b,a);
 	if(YGL_IS_ENABLED(YGL_COLOR_MATERIAL))
 	{
 		GLboolean has_front=(glctx.color_material_face==GL_FRONT||glctx.color_material_face==GL_FRONT_AND_BACK),
@@ -711,63 +721,63 @@ void glColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
 		case GL_AMBIENT:
 			if(has_front)
 			{
-				ASSIGN_F4_WITH(glctx.material_front.ambient,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_front.ambient,r,g,b,a);
 			}
 			if(has_back)
 			{
-				ASSIGN_F4_WITH(glctx.material_back.ambient,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_back.ambient,r,g,b,a);
 			}
 			break;
 		case GL_DIFFUSE:
 			if(has_front)
 			{
-				ASSIGN_F4_WITH(glctx.material_front.diffuse,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_front.diffuse,r,g,b,a);
 			}
 			if(has_back)
 			{
-				ASSIGN_F4_WITH(glctx.material_back.diffuse,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_back.diffuse,r,g,b,a);
 			}
 			break;
 		case GL_SPECULAR:
 			if(has_front)
 			{
-				ASSIGN_F4_WITH(glctx.material_front.specular,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_front.specular,r,g,b,a);
 			}
 			if(has_back)
 			{
-				ASSIGN_F4_WITH(glctx.material_back.specular,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_back.specular,r,g,b,a);
 			}
 			break;
 		case GL_EMISSION:
 			if(has_front)
 			{
-				ASSIGN_F4_WITH(glctx.material_front.emission,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_front.emission,r,g,b,a);
 			}
 			if(has_back)
 			{
-				ASSIGN_F4_WITH(glctx.material_back.emission,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_back.emission,r,g,b,a);
 			}
 			break;
 		case GL_AMBIENT_AND_DIFFUSE:
 			if(has_front)
 			{
-				ASSIGN_F4_WITH(glctx.material_front.ambient,r,g,b,a);
-				ASSIGN_F4_WITH(glctx.material_front.diffuse,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_front.ambient,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_front.diffuse,r,g,b,a);
 			}
 			if(has_back)
 			{
-				ASSIGN_F4_WITH(glctx.material_back.ambient,r,g,b,a);
-				ASSIGN_F4_WITH(glctx.material_front.diffuse,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_back.ambient,r,g,b,a);
+				ASSIGN_V4_WITH(glctx.material_front.diffuse,r,g,b,a);
 			}
 			break;
 		}
 	}
 }
 
-void glSecondaryColor3f(GLfloat r, GLfloat g, GLfloat b/*, GLfloat alpha = 0.f*/)
-{
-	ASSIGN_F3_WITH(glctx.cur_secondary_color,r,g,b);
-}
+// void glSecondaryColor3f(GLfloat r, GLfloat g, GLfloat b/*, GLfloat alpha = 0.f*/)
+// {
+// 	ASSIGN_V3_WITH(glctx.cur_secondary_color,r,g,b);
+// }
 
 void glNormal3f(GLfloat nx, GLfloat ny, GLfloat nz)
 {
@@ -783,7 +793,7 @@ void glNormal3f(GLfloat nx, GLfloat ny, GLfloat nz)
 
 void glTexCoord4f(GLfloat s, GLfloat t, GLfloat r, GLfloat q)
 {
-	ASSIGN_F4_WITH(glctx.cur_tex_coord,s,t,r,q);
+	ASSIGN_V4_WITH(glctx.cur_tex_coord,s,t,r,q);
 }
 
 void glMultiTexCoord4f(GLenum tex, GLfloat s, GLfloat t, GLfloat r, GLfloat q)
@@ -847,53 +857,53 @@ void glMaterialfv(GLenum face, GLenum pname, const GLfloat *params)
 	case GL_AMBIENT:
 		if(has_front)
 		{
-			ASSIGN_F4(glctx.material_front.ambient,params);
+			ASSIGN_V4(glctx.material_front.ambient,params);
 		}
 		if(has_back)
 		{
-			ASSIGN_F4(glctx.material_back.ambient,params);
+			ASSIGN_V4(glctx.material_back.ambient,params);
 		}
 		break;
 	case GL_DIFFUSE:
 		if(has_front)
 		{
-			ASSIGN_F4(glctx.material_front.diffuse,params);
+			ASSIGN_V4(glctx.material_front.diffuse,params);
 		}
 		if(has_back)
 		{
-			ASSIGN_F4(glctx.material_back.diffuse,params);
+			ASSIGN_V4(glctx.material_back.diffuse,params);
 		}
 		break;
 	case GL_SPECULAR:
 		if(has_front)
 		{
-			ASSIGN_F4(glctx.material_front.specular,params);
+			ASSIGN_V4(glctx.material_front.specular,params);
 		}
 		if(has_back)
 		{
-			ASSIGN_F4(glctx.material_back.specular,params);
+			ASSIGN_V4(glctx.material_back.specular,params);
 		}
 		break;
 	case GL_EMISSION:
 		if(has_front)
 		{
-			ASSIGN_F4(glctx.material_front.emission,params);
+			ASSIGN_V4(glctx.material_front.emission,params);
 		}
 		if(has_back)
 		{
-			ASSIGN_F4(glctx.material_back.emission,params);
+			ASSIGN_V4(glctx.material_back.emission,params);
 		}
 		break;
 	case GL_AMBIENT_AND_DIFFUSE:
 		if(has_front)
 		{
-			ASSIGN_F4(glctx.material_front.ambient,params);
-			ASSIGN_F4(glctx.material_front.diffuse,params);
+			ASSIGN_V4(glctx.material_front.ambient,params);
+			ASSIGN_V4(glctx.material_front.diffuse,params);
 		}
 		if(has_back)
 		{
-			ASSIGN_F4(glctx.material_back.ambient,params);
-			ASSIGN_F4(glctx.material_front.diffuse,params);
+			ASSIGN_V4(glctx.material_back.ambient,params);
+			ASSIGN_V4(glctx.material_front.diffuse,params);
 		}
 		break;
 	}
@@ -935,13 +945,13 @@ void glLightfv(GLenum light, GLenum pname, const GLfloat *params)
 	switch(pname)
 	{ 
 	case GL_AMBIENT:
-		ASSIGN_F4(li->ambient,params);
+		ASSIGN_V4(li->ambient,params);
 		break;
 	case GL_DIFFUSE:
-		ASSIGN_F4(li->diffuse,params);
+		ASSIGN_V4(li->diffuse,params);
 		break;
 	case GL_SPECULAR:
-		ASSIGN_F4(li->specular,params);
+		ASSIGN_V4(li->specular,params);
 		break;
 	case GL_POSITION:
 		// may be direction
@@ -998,7 +1008,7 @@ void glLightModelfv(GLenum pname, const GLfloat *params)
 		glctx.light_model.two_sided=*params;
 		break;
 	case GL_LIGHT_MODEL_AMBIENT:
-		ASSIGN_F4(glctx.light_model.ambient_scene,params);
+		ASSIGN_V4(glctx.light_model.ambient_scene,params);
 		break;
 	}
 }
@@ -1081,7 +1091,7 @@ void glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params)
 	//	break;
 	case GL_TEXTURE_BORDER_COLOR:
 		{
-			ASSIGN_F4(targetobj->border_color,params);
+			ASSIGN_V4(targetobj->border_color,params);
 		}
 		break;
 	}
@@ -1103,7 +1113,7 @@ void glTexEnvfv(GLenum target, GLenum pname, GLfloat* params)
 
 	if(pname==GL_TEXTURE_ENV_COLOR)
 	{
-		ASSIGN_F4(glctx.tex_env_color,params);
+		ASSIGN_V4(glctx.tex_env_color,params);
 	}
 }
 // void glTexGeni(GLenum coord, GLenum pname, GLint param)
@@ -1205,26 +1215,538 @@ void glFogfv(GLenum pname, const GLfloat *params)
 		glctx.cached_fog_e_s=1.f/(glctx.fog_end-glctx.fog_start);
 		break;
 	case GL_FOG_COLOR:
-		ASSIGN_F4(glctx.fog_color,params);
+		ASSIGN_V4(glctx.fog_color,params);
 		break;
 	}
 
 }
+
+/* fragment op */
+void glDepthMask(GLboolean flag)
+{
+	buffer::write_z=flag;
+}
+void glColorMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a)
+{
+	buffer::write_r=r;
+	buffer::write_g=g;
+	buffer::write_b=b;
+	buffer::write_a=a;
+}
+void glStencilMask(GLuint mask)
+{
+	buffer::write_s_mask=mask;
+}
+void glScissor(GLint x, GLint y, GLsizei width, GLsizei height)
+{
+	CHECK_VALID_VALUE
+	glctx.scissor_left=x;glctx.scissor_bottom=y;
+	glctx.scissor_right=x+width;glctx.scissor_top=y+height;
+}
+void glAlphaFunc(GLenum func, GLclampf ref)
+{
+#define MASK_TO_SET glctx.alpha_test_mask
+	switch(func)
+	{
+	case GL_NEVER:
+		MASK_TO_SET=0;
+		break;
+	case GL_ALWAYS:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_LE_0|FLOAT_GT_0);
+		break;
+	case GL_LESS:
+		MASK_TO_SET=(FLOAT_LE_0);
+		break;
+	case GL_LEQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_LE_0);
+		break;
+	case GL_EQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0);
+		break;
+	case GL_GREATER:
+		MASK_TO_SET=(FLOAT_GT_0);
+		break;
+	case GL_NOTEQUAL:
+		MASK_TO_SET=(FLOAT_LE_0|FLOAT_GT_0);
+		break;
+	case GL_GEQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_GT_0);
+		break;
+	}
+#undef MASK_TO_SET
+	ref=YGL_CLAMP_MIN_MAX(ref,0.f,1.f);
+	glctx.alpha_ref=YGL_COLOR_F2I(ref);
+}
+void glDepthFunc(GLenum func)
+{
+#define MASK_TO_SET glctx.depth_test_mask
+	switch(func)
+	{
+	case GL_NEVER:
+		MASK_TO_SET=0;
+		break;
+	case GL_ALWAYS:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_LE_0|FLOAT_GT_0);
+		break;
+	case GL_LESS:
+		MASK_TO_SET=(FLOAT_LE_0);
+		break;
+	case GL_LEQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_LE_0);
+		break;
+	case GL_EQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0);
+		break;
+	case GL_GREATER:
+		MASK_TO_SET=(FLOAT_GT_0);
+		break;
+	case GL_NOTEQUAL:
+		MASK_TO_SET=(FLOAT_LE_0|FLOAT_GT_0);
+		break;
+	case GL_GEQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_GT_0);
+		break;
+	}
+#undef MASK_TO_SET
+
+	//buffer::z_test_mask=(YGL_IS_ENABLED(YGL_DEPTH_TEST)?glctx.depth_test_mask:FLOAT_ALWAYS);
+}
+void glStencilFunc(GLenum func, GLint ref, GLuint mask)
+{
+	CHECK_VALID_VALUE
+
+#define MASK_TO_SET glctx.stencil_test_mask
+	switch(func)
+	{
+	case GL_NEVER:
+		MASK_TO_SET=0;
+		break;
+	case GL_ALWAYS:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_LE_0|FLOAT_GT_0);
+		break;
+	case GL_LESS:
+		MASK_TO_SET=(FLOAT_LE_0);
+		break;
+	case GL_LEQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_LE_0);
+		break;
+	case GL_EQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0);
+		break;
+	case GL_GREATER:
+		MASK_TO_SET=(FLOAT_GT_0);
+		break;
+	case GL_NOTEQUAL:
+		MASK_TO_SET=(FLOAT_LE_0|FLOAT_GT_0);
+		break;
+	case GL_GEQUAL:
+		MASK_TO_SET=(FLOAT_EQ_0|FLOAT_GT_0);
+		break;
+	}
+#undef MASK_TO_SET
+
+	glctx.stencil_ref=ref;
+	glctx.stencil_mask=mask;
+}
+void glStencilOp(GLenum sfail,GLenum dpfail,GLenum dppass)
+{
+	glctx.stencil_op_sfail=sfail;
+	glctx.stencil_op_dpfail=dpfail;
+	glctx.stencil_op_dppass=dppass;
+}
+void glBlendFunc(GLenum sfactor, GLenum dfactor)
+{
+	glctx.blend_sfactor=sfactor;
+	glctx.blend_dfactor=dfactor;
+}
+void glLogicOp(GLenum opcode)
+{
+	glctx.logicop=opcode;
+}
+void glClear(GLbitfield mask)
+{
+	if(mask&GL_COLOR_BUFFER_BIT)
+		buffer::clear_color(YGL_V4_LIST_COMPONENTS(glctx.clear_color));
+	if(mask&GL_DEPTH_BUFFER_BIT)
+		buffer::clear_depth(glctx.clear_depth);
+	if(mask&GL_STENCIL_BUFFER_BIT)
+		buffer::clear_stencil(glctx.clear_stencil);
+}
+void glClearColor(GLclampf rf, GLclampf gf, GLclampf bf, GLclampf af)
+{
+	cbuf_type r=YGL_COLOR_F2I(rf),g=YGL_COLOR_F2I(gf),b=YGL_COLOR_F2I(bf),a=YGL_COLOR_F2I(af);
+	ASSIGN_V4_WITH(glctx.clear_color,r,g,b,a);
+}
+void glClearDepth(GLclampd depth)
+{
+	glctx.clear_depth=(YGL_DEPTH_BUFFER_MAX_RES)*YGL_CLAMP_MIN_MAX(depth,0.,1.);
+}
+void glClearStencil(GLint s)
+{
+	glctx.clear_stencil=s;
+}
+
+// void glDepthMask(GLboolean flag)
+// {
+// 	if(flag)
+// 	{
+// 		YGL_SET_ENABLED_FLAG(glctx.buffer_write_mask,YGL_DEPTH_WRITE);
+// 	}
+// 	else
+// 	{
+// 		YGL_CLEAR_ENABLED_FLAG(glctx.buffer_write_mask,YGL_DEPTH_WRITE);
+// 	}
+// 
+// 	buffer::z_write_mask=(YGL_IS_ENABLED(YGL_DEPTH_TEST)?flag:false);
+// 	//_NOT_IMPLEMENTED_(glDepthMask);
+// }
+
+/* client state */
+void glEnableClientState(GLenum array)
+{
+	CHECK_VALID_VALUE
+	switch(array)
+	{
+	case GL_COLOR_ARRAY:
+		YGL_SET_ENABLED_FLAG(glctx.client_state,YGL_COLOR_ARRAY);
+		break;
+	case GL_EDGE_FLAG_ARRAY:
+		YGL_SET_ENABLED_FLAG(glctx.client_state,YGL_EDGE_FLAG_ARRAY);
+		break;
+	//GL_INDEX_ARRAY,
+	case GL_NORMAL_ARRAY:
+		YGL_SET_ENABLED_FLAG(glctx.client_state,YGL_NORMAL_ARRAY);
+		break;
+	case GL_TEXTURE_COORD_ARRAY:
+		YGL_SET_ENABLED_FLAG(glctx.client_state,YGL_TEXTURE_COORD_ARRAY);
+		break;
+	case GL_VERTEX_ARRAY:
+		YGL_SET_ENABLED_FLAG(glctx.client_state,YGL_VERTEX_ARRAY);
+		break;
+	}
+}
+void glDisableClientState(GLenum array)
+{
+	CHECK_VALID_VALUE
+	switch(array)
+	{
+	case GL_COLOR_ARRAY:
+		YGL_CLEAR_ENABLED_FLAG(glctx.client_state,YGL_COLOR_ARRAY);
+		break;
+	case GL_EDGE_FLAG_ARRAY:
+		YGL_CLEAR_ENABLED_FLAG(glctx.client_state,YGL_EDGE_FLAG_ARRAY);
+		break;
+		//GL_INDEX_ARRAY,
+	case GL_NORMAL_ARRAY:
+		YGL_CLEAR_ENABLED_FLAG(glctx.client_state,YGL_NORMAL_ARRAY);
+		break;
+	case GL_TEXTURE_COORD_ARRAY:
+		YGL_CLEAR_ENABLED_FLAG(glctx.client_state,YGL_TEXTURE_COORD_ARRAY);
+		break;
+	case GL_VERTEX_ARRAY:
+		YGL_CLEAR_ENABLED_FLAG(glctx.client_state,YGL_VERTEX_ARRAY);
+		break;
+	}
+}
+void glColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer)
+{
+	// only GL_FLOAT
+	CHECK_VALID_VALUE
+
+	glctx.client_arrays[YGL_COLOR_ARRAY].size=size;
+	glctx.client_arrays[YGL_COLOR_ARRAY].type=GL_FLOAT/*type*/;
+	glctx.client_arrays[YGL_COLOR_ARRAY].stride=(stride?stride:(sizeof(GLfloat)*size));
+	glctx.client_arrays[YGL_COLOR_ARRAY].pointer=pointer;
+}
+void glEdgeFlagPointer(GLsizei stride, const GLvoid *pointer)
+{
+	// only GL_FLOAT
+	CHECK_VALID_VALUE
+
+	//client_arrays[YGL_EDGE_FLAG_ARRAY].size=1;
+	//client_arrays[YGL_EDGE_FLAG_ARRAY].type=GL_BOOL;
+	glctx.client_arrays[YGL_EDGE_FLAG_ARRAY].stride=(stride?stride:sizeof(GLboolean));
+	glctx.client_arrays[YGL_EDGE_FLAG_ARRAY].pointer=pointer;
+}
+//void glIndexPointer(GLenum type, GLsizei stride, const GLvoid *pointer);
+void glNormalPointer(GLenum type, GLsizei stride, const GLvoid *pointer)
+{
+	// only GL_FLOAT
+	CHECK_VALID_VALUE
+
+	//client_arrays[YGL_NORMAL_ARRAY].size=3;
+	glctx.client_arrays[YGL_NORMAL_ARRAY].type=GL_FLOAT/*type*/;
+	glctx.client_arrays[YGL_NORMAL_ARRAY].stride=(stride?stride:(sizeof(GLfloat)*3));
+	glctx.client_arrays[YGL_NORMAL_ARRAY].pointer=pointer;
+}
+void glTexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer)
+{
+	// only GL_FLOAT
+	CHECK_VALID_VALUE
+
+	glctx.client_arrays[YGL_TEXTURE_COORD_ARRAY].size=size;
+	glctx.client_arrays[YGL_TEXTURE_COORD_ARRAY].type=GL_FLOAT/*type*/;
+	glctx.client_arrays[YGL_TEXTURE_COORD_ARRAY].stride=(stride?stride:(sizeof(GLfloat)*size));
+	glctx.client_arrays[YGL_TEXTURE_COORD_ARRAY].pointer=pointer;
+}
+void glVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer)
+{
+	// only GL_FLOAT
+	CHECK_VALID_VALUE
+
+	glctx.client_arrays[YGL_VERTEX_ARRAY].size=size;
+	glctx.client_arrays[YGL_VERTEX_ARRAY].type=GL_FLOAT/*type*/;
+	glctx.client_arrays[YGL_VERTEX_ARRAY].stride=(stride?stride:(sizeof(GLfloat)*size));
+	glctx.client_arrays[YGL_VERTEX_ARRAY].pointer=pointer;
+}
+#define GET_CLIENT_ARRAY_ELEMENT(arr,ele_type,i) \
+	(ele_type*)(((GLubyte*)(arr)->pointer)+(i)*((arr)->size*sizeof(ele_type)+(arr)->stride))
+// generate multiple version?
+void glArrayElement(GLint i)
+{
+	GLContext::ClientArray* arr=0;
+	if(YGL_IS_CLIENTSTATE_ENABLED(YGL_COLOR_ARRAY))
+	{
+		arr=glctx.client_arrays+YGL_COLOR_ARRAY;
+		switch(arr->size)
+		{
+		case 3:
+			glColor3fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		case 4:
+			glColor4fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		}
+	}
+	if(YGL_IS_CLIENTSTATE_ENABLED(YGL_NORMAL_ARRAY))
+	{
+		arr=glctx.client_arrays+YGL_NORMAL_ARRAY;
+
+		glNormal3fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+	}
+	if(YGL_IS_CLIENTSTATE_ENABLED(YGL_TEXTURE_COORD_ARRAY))
+	{
+		arr=glctx.client_arrays+YGL_TEXTURE_COORD_ARRAY;
+		switch(arr->size)
+		{
+		case 1:
+			glTexCoord1fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		case 2:
+			glTexCoord2fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		case 3:
+			glTexCoord3fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		case 4:
+			glTexCoord4fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		}
+	}
+	// edge
+
+	if(YGL_IS_CLIENTSTATE_ENABLED(YGL_VERTEX_ARRAY))
+	{
+		arr=glctx.client_arrays+YGL_VERTEX_ARRAY;
+		switch(arr->size)
+		{
+		case 2:
+			glVertex2fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		case 3:
+			glVertex3fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		case 4:
+			glVertex4fv(GET_CLIENT_ARRAY_ELEMENT(arr,GLfloat,i));
+			break;
+		}
+	}
+}
+void glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
+{
+	CHECK_VALID_VALUE
+
+	glBegin(mode);
+
+	switch(type)
+	{
+	case GL_UNSIGNED_BYTE:
+		{
+			GLubyte* ids=(GLubyte*)indices;
+			for(int i=0;i<count;++i)
+				glArrayElement(ids[i]);
+		}
+		break;
+	case GL_UNSIGNED_SHORT:
+		{
+			GLushort* ids=(GLushort*)indices;
+			for(int i=0;i<count;++i)
+				glArrayElement(ids[i]);
+		}
+		break;
+	case GL_UNSIGNED_INT:
+		{
+			GLuint* ids=(GLuint*)indices;
+			for(int i=0;i<count;++i)
+				glArrayElement(ids[i]);
+		}
+		break;
+	}
+	
+	glEnd();
+}
+void glDrawArrays(GLenum mode, GLint first, GLsizei count)
+{
+	CHECK_VALID_VALUE
+
+	glBegin(mode);
+	
+	for(int end=first+count;first<end;++first)
+		glArrayElement(first);
+
+	glEnd();
+
+}
+void glInterleavedArrays(GLenum format, GLsizei stride, const GLvoid *pointer)
+{
+	CHECK_VALID_VALUE
+
+	GLboolean et=false,ec=false,en=false;
+	GLsizei st=0,sc=0,sv=0;
+	//GLenum tc;
+	GLuint pc=0,pn=0,pv=0;
+	GLsizei s=0;
+
+#define F sizeof(GLfloat)
+
+	switch(format)
+	{
+	case GL_V2F:
+		et=ec=en=false;
+		sv=2;
+		pv=0;
+		s=2*F;
+	case GL_V3F:
+		et=ec=en=false;
+		sv=3;
+		pv=0;
+		s=3*F;
+	// GL_C4UB_V2F, GL_C4UB_V3F
+	case GL_C3F_V3F:
+		et=false;ec=true;en=false;
+		sc=3;
+		sv=3;
+		pc=0;pv=3*F;
+		s=6*F;
+		break;
+	case GL_N3F_V3F:
+		et=false;ec=false;en=true;
+		sv=3;
+		pn=0;pv=3*F;
+		s=6*F;
+		break;
+	case GL_C4F_N3F_V3F:
+		et=false;ec=true;en=true;
+		sc=4;
+		sv=3;
+		pc=0;pn=4*F;pv=7*F;
+		s=10*F;
+		break;
+	case GL_T2F_V3F:
+		et=true;ec=false;en=false;
+		st=2;sv=3;
+		pv=2*F;
+		s=5*F;
+		break;
+	case GL_T4F_V4F:
+		et=true;ec=false;en=false;
+		st=4;sv=4;
+		pv=4*F;
+		s=8*F;
+		break;
+	//case GL_T2F_C4UB_V3F
+	case GL_T2F_C3F_V3F:
+		et=true;ec=true;en=false;
+		st=2;sc=3;sv=3;
+		pc=2*F;pv=5*F;
+		s=8*F;
+		break;
+	case GL_T2F_N3F_V3F:
+		et=true;ec=false;en=true;
+		st=2;sv=3;
+		pn=2*F;pv=5*F;
+		s=8*F;
+		break;
+	case GL_T2F_C4F_N3F_V3F:
+		et=ec=en=true;
+		st=2;sc=4;sv=3;
+		pc=2*F;pn=6*F;pv=9*F;
+		s=12*F;
+		break;
+	case GL_T4F_C4F_N3F_V4F:
+		et=ec=en=true;
+		st=4;sc=4;sv=4;
+		pc=4*F;pn=8*F;pv=11*F;
+		s=15*F;
+		break;
+	}
+#undef F
+	GLint str=stride;
+	if(!str) str=s;
+
+	glDisableClientState(GL_EDGE_FLAG_ARRAY);
+	//glDisableClientState(GL_INDEX_ARRAY);
+	if(et)
+	{
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glTexCoordPointer(st,GL_FLOAT,str,pointer);
+	}
+	else
+	{
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	}
+
+	if(ec)
+	{
+		glEnableClientState(GL_COLOR_ARRAY);
+		glColorPointer(sc,GL_FLOAT,str,((GLubyte*)pointer)+pc);
+	}
+	else
+	{
+		glDisableClientState(GL_COLOR_ARRAY);
+	}
+
+	if(en)
+	{
+		glEnableClientState(GL_NORMAL_ARRAY);
+		glNormalPointer(GL_FLOAT,str,((GLubyte*)pointer)+pn);
+	}
+	else
+	{
+		glDisableClientState(GL_NORMAL_ARRAY);
+	}
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(sv,GL_FLOAT,str,((GLubyte*)pointer)+pv);
+
+}
+
+
 /* matrix */
 void glMatrixMode(GLenum mode)
 {
 	CHECK_IS_NO_BEGIN
 
-	switch(mode)
+		switch(mode)
 	{
-	case GL_MODELVIEW:
-		glctx.cur_matrix=glctx.matrix_mv.peek();
-		break;
-	case GL_PROJECTION:
-		glctx.cur_matrix=glctx.matrix_proj.peek();
-		break;
-	//case GL_TEXTURE:
-	default: return;
+		case GL_MODELVIEW:
+			glctx.cur_matrix=glctx.matrix_mv.peek();
+			break;
+		case GL_PROJECTION:
+			glctx.cur_matrix=glctx.matrix_proj.peek();
+			break;
+			//case GL_TEXTURE:
+		default: return;
 	}
 	glctx.cur_matrix_mode=mode;
 }
@@ -1232,74 +1754,74 @@ void glLoadIdentity(void)
 {
 	CHECK_IS_NO_BEGIN
 
-	if(glctx.cur_matrix)
-	{
-		GLfloat* m=glctx.cur_matrix->m;
-		m[0]=1.0f;m[4]=0.0f;m[8]=0.0f;m[12]=0.0f;
-		m[1]=0.0f;m[5]=1.0f;m[9]=0.0f;m[13]=0.0f;
-		m[2]=0.0f;m[6]=0.0f;m[10]=1.0f;m[14]=0.0f;
-		m[3]=0.0f;m[7]=0.0f;m[11]=0.0f;m[15]=1.0f;
-
-		if(glctx.cur_matrix_mode==GL_MODELVIEW)
+		if(glctx.cur_matrix)
 		{
-			memset(glctx.cached_mv_inverse.m,0,sizeof(GLfloat)*16);
-			glctx.cached_mv_inverse.m[0]=
-				glctx.cached_mv_inverse.m[5]=
-				glctx.cached_mv_inverse.m[10]=
-				glctx.cached_mv_inverse.m[15]=1.0f;
-			glctx.cached_mv_inverse_valid=true;
+			GLfloat* m=glctx.cur_matrix->m;
+			m[0]=1.0f;m[4]=0.0f;m[8]=0.0f;m[12]=0.0f;
+			m[1]=0.0f;m[5]=1.0f;m[9]=0.0f;m[13]=0.0f;
+			m[2]=0.0f;m[6]=0.0f;m[10]=1.0f;m[14]=0.0f;
+			m[3]=0.0f;m[7]=0.0f;m[11]=0.0f;m[15]=1.0f;
+
+			if(glctx.cur_matrix_mode==GL_MODELVIEW)
+			{
+				memset(glctx.cached_mv_inverse.m,0,sizeof(GLfloat)*16);
+				glctx.cached_mv_inverse.m[0]=
+					glctx.cached_mv_inverse.m[5]=
+					glctx.cached_mv_inverse.m[10]=
+					glctx.cached_mv_inverse.m[15]=1.0f;
+				glctx.cached_mv_inverse_valid=true;
+			}
 		}
-	}
 }
 void glPushMatrix(void)
 {
 	CHECK_IS_NO_BEGIN
 
-	switch(glctx.cur_matrix_mode)
+		switch(glctx.cur_matrix_mode)
 	{
-	case GL_MODELVIEW:
-		if(glctx.matrix_mv.full()){glctx.last_error=GL_STACK_OVERFLOW;return;}
-		glctx.cur_matrix=glctx.matrix_mv.push(*glctx.cur_matrix);
-		break;
-	case GL_PROJECTION:
-		if(glctx.matrix_proj.full()){glctx.last_error=GL_STACK_OVERFLOW;return;}
-		glctx.cur_matrix=glctx.matrix_proj.push(*glctx.cur_matrix);
-		break;
-		//case GL_TEXTURE:
-	default: return;
+		case GL_MODELVIEW:
+			if(glctx.matrix_mv.full()){glctx.last_error=GL_STACK_OVERFLOW;return;}
+			glctx.cur_matrix=glctx.matrix_mv.push(*glctx.cur_matrix);
+			break;
+		case GL_PROJECTION:
+			if(glctx.matrix_proj.full()){glctx.last_error=GL_STACK_OVERFLOW;return;}
+			glctx.cur_matrix=glctx.matrix_proj.push(*glctx.cur_matrix);
+			break;
+			//case GL_TEXTURE:
+		default: return;
 	}
 }
 void glPopMatrix(void)
 {
 	CHECK_IS_NO_BEGIN
 
-	switch(glctx.cur_matrix_mode)
+		switch(glctx.cur_matrix_mode)
 	{
-	case GL_MODELVIEW:
-		// at least one entry
-		if(glctx.matrix_mv.cnt()<=1){glctx.last_error=GL_STACK_UNDERFLOW;return;}
-		// so don't modify cur_matrix??
-		glctx.cur_matrix=glctx.matrix_mv.pop();
+		case GL_MODELVIEW:
+			// at least one entry
+			if(glctx.matrix_mv.cnt()<=1){glctx.last_error=GL_STACK_UNDERFLOW;return;}
+			// so don't modify cur_matrix??
+			glctx.cur_matrix=glctx.matrix_mv.pop();
 
-		glctx.cached_mv_inverse_valid=false;
-		break;
-	case GL_PROJECTION:
-		if(glctx.matrix_mv.cnt()<=1){glctx.last_error=GL_STACK_UNDERFLOW;return;}
-		glctx.cur_matrix=glctx.matrix_proj.pop();
-		break;
-		//case GL_TEXTURE:
-	default: return;
+			glctx.cached_mv_inverse_valid=false;
+			break;
+		case GL_PROJECTION:
+			if(glctx.matrix_mv.cnt()<=1){glctx.last_error=GL_STACK_UNDERFLOW;return;}
+			glctx.cur_matrix=glctx.matrix_proj.pop();
+			break;
+			//case GL_TEXTURE:
+		default: return;
 	}
 }
 void glLoadMatrixf(const GLfloat *m)
 {
 	CHECK_IS_NO_BEGIN
 
-	if(glctx.cur_matrix)
-	{
-		memcpy(glctx.cur_matrix->m,m,16*sizeof(GLfloat));
-		SET_MVINV_CACHED_INVALID;
-	}
+		if(glctx.cur_matrix)
+		{
+			memcpy(glctx.cur_matrix->m,m,16*sizeof(GLfloat));
+			SET_MVINV_CACHED_INVALID;
+		}
 }
 // right mul
 void glMultMatrixf(const GLfloat *m)

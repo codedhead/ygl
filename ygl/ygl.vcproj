@@ -225,10 +225,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\fragment.h"
-				>
-			</File>
-			<File
 				RelativePath=".\geom.h"
 				>
 			</File>

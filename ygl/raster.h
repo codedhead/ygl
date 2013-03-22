@@ -6,6 +6,7 @@ using namespace ygl;
 
 struct Vertex;
 struct TextureObject;
+namespace ygl{
 namespace raster
 {
 #define line_bresenham raster::line
@@ -69,5 +70,5 @@ namespace raster
 	//void triangle(Vertex* v);
 	void scanline(Vertex* v,int vcnt,GLenum option,GLubyte* flat_color,TextureObject* texobj);
 }
-
+}
 #endif

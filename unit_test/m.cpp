@@ -122,6 +122,8 @@ void drawWireBox(float halfSize)
 #define DRAW_TYPE GL_QUADS
 //#define DRAW_TYPE GL_LINE_LOOP
 
+	//glPolygonMode(GL_FRONT_AND_BACK,GL_POINT);
+
 #define _LEFT_FACE
 #define _RIGHT_FACE
 #define _TOP_FACE
@@ -263,10 +265,7 @@ void init()
 	glEnable(GL_NORMALIZE);
 	//glEnable(GL_RESC)
 	//glEnable(GL_LIGHTING);
- 	glEnable(GL_LIGHT0);
-// 	glDepthFunc(GL_LESS);
-// 	glEnable(GL_DEPTH_TEST);
-// 	glEnable(GL_LIGHTING);	glEnable(GL_CULL_FACE);
+ 	glEnable(GL_LIGHT0);	glEnable(GL_CULL_FACE);
 	glDepthFunc(GL_LESS);
 	glEnable(GL_DEPTH_TEST);
 	glCullFace(GL_BACK);
@@ -325,7 +324,7 @@ void display(void)
 	glMatrixMode(GL_MODELVIEW);  
 	glLoadIdentity();
 #else
-	gluPerspective(60, (double)width/(double)height, 0.1, 10000.0);  
+	gluPerspective(60, (double)width/(double)height, 0.1, 100.0);  
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(0.,0.,4.,0,0.,0.,0.,1.,0.);
@@ -335,7 +334,7 @@ void display(void)
 
 #ifdef TEST_ORTHO
 	glTranslatef(translate_x,translate_y,0.f);
-	glRotatef(rot_angle,0.f,0.f,1.f);
+	//glRotatef(rot_angle,0.f,0.f,1.f);
 
 	// 	glBegin(GL_LINES);
 	// 	glVertex2f(-0.25f*width,0);
@@ -359,9 +358,12 @@ void display(void)
 	//glRectf(-0.25f*width,-0.25f*height,0.25f*width,0.25f*height);
 	//glRectf(-0.5f*width,-0.5f*height,0.5f*width,0.5f*height);
 	glColor3f(TRIPPLE_RED);
-	glRectf(-0.5f*width,-0.5f*height,0,0.5f*height);
-	glColor3f(TRIPPLE_BLUE);
-	glRectf(0,-0.5f*height,0.5f*width,0.5f*height);
+	//glRectf(-0.5f*width,-0.5f*height,0,0.5f*height);
+	//glColor3f(TRIPPLE_BLUE);
+	//glRectf(0,-0.5f*height,0.5f*width,0.5f*height);
+
+	glRectf(-0.5f*width,-0.5f*height,0.5f*width,0.5f*height);
+
 
 #else
 	glTranslatef(0.01f*translate_x,0.01f*translate_y,0.f);

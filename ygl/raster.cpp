@@ -11,7 +11,7 @@
 #ifdef USE_MEM_FACTORY
 #include "memory.h"
 #endif
-
+namespace ygl{
 namespace raster
 {
 
@@ -60,9 +60,9 @@ namespace raster
 			255
 		};
 
-		buffer::plot_ubyte_func plot_func=(buffer::z_test_mask==FLOAT_ALWAYS?
-			buffer::plot_ubyte_no_ztest:
-			buffer::plot_ubyte);
+// 		buffer::plot_ubyte_func plot_func=(buffer::z_test_mask==FLOAT_ALWAYS?
+// 			buffer::plot_ubyte_no_ztest:
+// 			buffer::plot_ubyte);
 
 		int x0=ROUND(v[0].p[0]),
 			y0=ROUND(v[0].p[1]),
@@ -88,7 +88,7 @@ namespace raster
 			}
 
 			for(int y=y0;y<=y1;++y,z+=dz)
-				plot_func(x0,y,z,color);
+				buffer::plot(x0,y,(zbuf_type)z,color);
 
 			return;
 		}
@@ -105,7 +105,7 @@ namespace raster
 			}
 
 			for(int x=x0;x<=x1;++x,z+=dz)
-				plot_func(x,y0,z,color);
+				buffer::plot(x,y0,z,color);
 
 			return;
 		}
@@ -128,12 +128,12 @@ namespace raster
 			if(y0<y1)
 			{
 				for(int x=x0,y=y0;x<=x1;++x,++y,z+=dz)
-					plot_func(x,y,z,color);
+					buffer::plot(x,y,z,color);
 			}
 			else
 			{
 				for(int x=x0,y=y0;x<=x1;++x,--y,z+=dz)
-					plot_func(x,y,z,color);
+					buffer::plot(x,y,z,color);
 			}
 		}
 		else
@@ -185,12 +185,12 @@ namespace raster
 					if(D<=0) // use bottom
 					{
 						D+=delta1;
-						plot_func(y,x,z,color);
+						buffer::plot(y,x,z,color);
 					}
 					else
 					{
 						D+=delta2;
-						plot_func((y+=inc_y),x,z,color);
+						buffer::plot((y+=inc_y),x,z,color);
 					}
 				}
 			}
@@ -201,12 +201,12 @@ namespace raster
 					if(D<=0) // use bottom
 					{
 						D+=delta1;
-						plot_func(x,y,z,color);
+						buffer::plot(x,y,z,color);
 					}
 					else
 					{
 						D+=delta2;
-						plot_func(x,(y+=inc_y),z,color);
+						buffer::plot(x,(y+=inc_y),z,color);
 					}
 				}
 			}
@@ -214,6 +214,8 @@ namespace raster
 
 	}
 
+	// no support for smooth, tex line
+	/*
 	// no perspective correction
 	void line_smooth(Vertex* v)
 	{
@@ -370,6 +372,7 @@ namespace raster
 		}
 
 	}
+	*/
 
 	// todo: handle exceptions? single vert isect, horizontal line no add to etable
 	struct ETRecord
@@ -426,28 +429,29 @@ namespace raster
 			//int dx=,dy=ymax-ymin;
 		}
 
-		virtual void fill_span(ETRecord* that,GLubyte* cbuf,GLuint* zbuf,GLubyte* color,TextureObject* texobj)
+		virtual void fill_span(GLint y,ETRecord* that,/*GLubyte* cbuf,GLuint* zbuf,*/cbuf_type* flat_color,TextureObject* texobj)
 		{
 			int left=ROUND(this->curx),right=ROUND(that->curx);
 			GLdouble spanz=this->z,d_spanz=(that->z-spanz)/((GLfloat)(right-left)); // dx
-			GLubyte depthtest=buffer::z_test_mask;
+			
 			// fill span
 			for(int x=left;x<right;++x)
 			{
+				buffer::plot(x,y,(zbuf_type)spanz,flat_color);
 				//if(d_span_z<0&&span_z<that->z) span_z=that->z;
-				if(SIGN_OF_DOUBLE(spanz-*zbuf)&depthtest)
-				{
-					*cbuf++=color[0];
-					*cbuf++=color[1];
-					*cbuf++=color[2];
-					*zbuf=spanz;
-				}
-				else
-				{
-					cbuf+=3;
-				}
-				
-				++zbuf;
+// 				if(SIGN_OF_DOUBLE(spanz-*zbuf)&depthtest)
+// 				{
+// 					*cbuf++=color[0];
+// 					*cbuf++=color[1];
+// 					*cbuf++=color[2];
+// 					*zbuf=spanz;
+// 				}
+// 				else
+// 				{
+// 					cbuf+=3;
+// 				}
+//				
+//				++zbuf;
 				spanz+=d_spanz;
 			}
 		}
@@ -470,7 +474,7 @@ namespace raster
 
 		//start from v1
 		virtual void init_attribs(Vertex* v1,Vertex* v2,GLfloat _dy,GLfloat theother_w)=0;
-		virtual void plot(GLubyte* cbuf,GLuint* zbuf,GLfloat w,GLfloat* att_p_w,TextureObject* texobj)=0;
+		virtual void fragment(GLfloat w,GLfloat* att_p_w,cbuf_type* flat_color,TextureObject* texobj,cbuf_type* res_color)=0;
 
 		/*virtual */void build(Vertex* v1,Vertex* v2)
 		{
@@ -513,12 +517,10 @@ namespace raster
 				att_w[i]+=d_att_w_dy[i];
 		}
 
-		/*virtual */void fill_span(ETRecord* spanto,GLubyte* cbuf,GLuint* zbuf,GLubyte* color,TextureObject* texobj)
+		/*virtual */void fill_span(GLint y,ETRecord* spanto,cbuf_type* flat_color,TextureObject* texobj)
 		{
 			ETRecord_Persp<pAttribNum>* that=(ETRecord_Persp<pAttribNum>*)spanto;
 			int left=ROUND(this->curx),right=ROUND(that->curx);
-			GLubyte depthtest=buffer::z_test_mask;
-			GLboolean depthwrite=buffer::z_write_mask;
 
 			GLfloat _dx=1.f/((GLfloat)(right-left));
 			GLfloat span_w=this->_w,d_w_dx=(that->_w-span_w)*_dx;
@@ -531,18 +533,24 @@ namespace raster
 				span_att_w[i]=this->att_w[i];
 				d_att_w_dx[i]=(that->att_w[i]-span_att_w[i])*_dx;
 			}
+
+			cbuf_type fragment_color[4];
 			
+// 			cbuf_type* cbuf=buffer::framebuf_ptr(left,y);
+// 			zbuf_type* zbuf=buffer::depthbuf_ptr(left,y);
+
 			// fill span
 			for(int x=left;x<right;++x)
 			{
-				if(SIGN_OF_DOUBLE(spanz-*zbuf)&depthtest)
-				{
-					plot(cbuf,zbuf,1.f/span_w,span_att_w,texobj);
-
-					/*if(depthwrite) */*zbuf=spanz;
-				}
+				fragment(1.f/span_w,span_att_w,flat_color,texobj,fragment_color);
+				buffer::plot(x,y,(zbuf_type)spanz,fragment_color);
+				//buffer::plot(x,y,(zbuf_type)spanz,cbuf,zbuf,fragment_color);
 				
-				++zbuf;cbuf+=3;
+				//++zbuf;cbuf+=3;
+// 				*cbuf++=fragment_color[0];
+// 				*cbuf++=fragment_color[1];
+// 				*cbuf++=fragment_color[2];
+// 				*cbuf++=fragment_color[3];
 
 				for(int i=0;i<pAttribNum;++i)
 				{
@@ -550,6 +558,8 @@ namespace raster
 				}
 				span_w+=d_w_dx;
 				spanz+=d_spanz;
+
+				//++zbuf;cbuf+=4;
 			}
 		}
 	};
@@ -565,7 +575,7 @@ namespace raster
 
 		//start from v1
 		virtual void init_attribs(Vertex* v1,Vertex* v2,GLfloat _dy)=0;
-		virtual void plot(GLubyte* cbuf,GLuint* zbuf,GLfloat* att_np,TextureObject* texobj)=0;
+		virtual void fragment(GLfloat* att_np,cbuf_type* flat_color,TextureObject* texobj,cbuf_type* res_color)=0;
 
 		/*virtual */void build(Vertex* v1,Vertex* v2)
 		{
@@ -603,11 +613,10 @@ namespace raster
 				att[i]+=d_att_dy[i];
 		}
 
-		/*virtual */void fill_span(ETRecord* spanto,GLubyte* cbuf,GLuint* zbuf,GLubyte* color,TextureObject* texobj)
+		/*virtual */void fill_span(GLint y,ETRecord* spanto,cbuf_type* flat_color,TextureObject* texobj)
 		{
 			ETRecord_NoPersp<npAttribNum>* that=(ETRecord_NoPersp<npAttribNum>*)spanto;
 			int left=ROUND(this->curx),right=ROUND(that->curx);
-			GLubyte depthtest=buffer::z_test_mask;
 
 			GLfloat _dx=1.f/((GLfloat)(right-left));
 			//GLfloat span_w=this->_w,d_w_dx=(that->_w-span_w)*_dx;
@@ -621,17 +630,14 @@ namespace raster
 				d_att_dx[i]=(that->att[i]-span_att[i])*_dx;
 			}
 
+			cbuf_type fragment_color[4];
 			// fill span
 			for(int x=left;x<right;++x)
 			{
-				if(SIGN_OF_DOUBLE(spanz-*zbuf)&depthtest)
-				{
-					plot(cbuf,zbuf,span_att,texobj);
+				fragment(span_att,flat_color,texobj,fragment_color);
+				buffer::plot(x,y,(zbuf_type)spanz,fragment_color);
 
-					*zbuf=spanz;
-				}
-
-				++zbuf;cbuf+=3;
+				//++zbuf;cbuf+=3;
 
 				for(int i=0;i<npAttribNum;++i)
 				{
@@ -654,7 +660,7 @@ namespace raster
 
 		//start from v1
 		virtual void init_attribs(Vertex* v1,Vertex* v2,GLfloat _dy,GLfloat theother_w)=0;
-		virtual void plot(GLubyte* cbuf,GLuint* zbuf,GLfloat w,GLfloat* att_np,GLfloat* att_p_w,TextureObject* texobj)=0;
+		virtual void fragment(GLfloat w,GLfloat* att_np,GLfloat* att_p_w,cbuf_type* flat_color,TextureObject* texobj,cbuf_type* res_color)=0;
 
 		/*virtual */void build(Vertex* v1,Vertex* v2)
 		{
@@ -699,11 +705,10 @@ namespace raster
 				att_w[i]+=d_att_w_dy[i];
 		}
 
-		/*virtual */void fill_span(ETRecord* spanto,GLubyte* cbuf,GLuint* zbuf,GLubyte* color,TextureObject* texobj)
+		/*virtual */void fill_span(GLint y,ETRecord* spanto,cbuf_type* flat_color,TextureObject* texobj)
 		{
 			ETRecord_Mix<npAttribNum,pAttribNum>* that=(ETRecord_Mix<npAttribNum,pAttribNum>*)spanto;
 			int left=ROUND(this->curx),right=ROUND(that->curx);
-			GLubyte depthtest=buffer::z_test_mask;
 
 			GLfloat _dx=1.f/((GLfloat)(right-left));
 			GLfloat span_w=this->_w,d_w_dx=(that->_w-span_w)*_dx;
@@ -723,17 +728,14 @@ namespace raster
 				d_att_w_dx[i]=(that->att_w[i]-span_att_w[i])*_dx;
 			}
 
+			cbuf_type fragment_color[4];
 			// fill span
 			for(int x=left;x<right;++x)
 			{
-				if(SIGN_OF_DOUBLE(spanz-*zbuf)&depthtest)
-				{
-					plot(cbuf,zbuf,1.f/span_w,span_att,span_att_w,texobj);
+				fragment(1.f/span_w,span_att_w,flat_color,texobj,fragment_color);
+				buffer::plot(x,y,(zbuf_type)spanz,fragment_color);
 
-					*zbuf=spanz;
-				}
-
-				++zbuf;cbuf+=3;
+				//++zbuf;cbuf+=3;
 
 				for(int i=0;i<npAttribNum;++i)
 				{
@@ -777,11 +779,12 @@ namespace raster
 			SETUP_DATTRIB_NOP(___B,YGL_COLOR_F2IF(v2->col_front_pri[2]));
 			SETUP_DATTRIB_NOP(___A,YGL_COLOR_F2IF(v2->col_front_pri[3]));
 		}
-		void plot(GLubyte* cbuf,GLuint* zbuf,GLfloat* att_np,TextureObject* texobj)
+		void fragment(GLfloat* att_np,cbuf_type* flat_color,TextureObject* texobj,cbuf_type* res_color)
 		{
-			*cbuf++=(int)GET_ATTRIB_NOP(___R);
-			*cbuf++=(int)GET_ATTRIB_NOP(___G);
-			*cbuf++=(int)GET_ATTRIB_NOP(___B);
+			res_color[0]=(cbuf_type)GET_ATTRIB_NOP(___R);
+			res_color[1]=(cbuf_type)GET_ATTRIB_NOP(___G);
+			res_color[2]=(cbuf_type)GET_ATTRIB_NOP(___B);
+			res_color[3]=(cbuf_type)GET_ATTRIB_NOP(___A);
 			// Alpha??
 		}
 #undef ___R
@@ -817,13 +820,12 @@ namespace raster
 			SETUP_DATTRIB_P(___B,YGL_COLOR_F2IF(v2->col_front_pri[2]));
 			SETUP_DATTRIB_P(___A,YGL_COLOR_F2IF(v2->col_front_pri[3]));
 		}
-		void plot(GLubyte* cbuf,GLuint* zbuf,GLfloat w,GLfloat* att_p_w,TextureObject* texobj)
+		void fragment(GLfloat w,GLfloat* att_p_w,cbuf_type* flat_color,TextureObject* texobj,cbuf_type* res_color)
 		{
-// 			*cbuf++=(int)GET_ATTRIB_P(___R);
-// 			*cbuf++=(int)GET_ATTRIB_P(___G);
-// 			*cbuf++=(int)GET_ATTRIB_P(___B);
-			GLubyte cols[]={(GLubyte)GET_ATTRIB_P(___R),(GLubyte)GET_ATTRIB_P(___G),(GLubyte)GET_ATTRIB_P(___B)};
-			buffer::fragment::plot(cbuf,cols);
+			res_color[0]=(cbuf_type)GET_ATTRIB_P(___R);
+			res_color[1]=(cbuf_type)GET_ATTRIB_P(___G);
+			res_color[2]=(cbuf_type)GET_ATTRIB_P(___B);
+			res_color[3]=(cbuf_type)GET_ATTRIB_P(___A);
 			// Alpha??
 		}
 #undef ___R
@@ -867,7 +869,7 @@ namespace raster
 			SETUP_DATTRIB_P(___S,v2->tex_coords[0]);
 			SETUP_DATTRIB_P(___T,v2->tex_coords[1]);
 		}
-		void plot(GLubyte* cbuf,GLuint* zbuf,GLfloat w,GLfloat* att_p_w,TextureObject* texobj)
+		void fragment(GLfloat w,GLfloat* att_p_w,cbuf_type* flat_color,TextureObject* texobj,cbuf_type* res_color)
 		{
 			GLfloat s,t;
 			s=GET_ATTRIB_P(___S);
@@ -881,8 +883,11 @@ namespace raster
 // 			*cbuf++=(int)(tex_color[2]*GET_ATTRIB_P(___B));
 			
 			// GL_REPLACE
-			GLubyte cols[]={(GLubyte)(tex_color[0]*255.f),(GLubyte)(tex_color[1]*255.f),(GLubyte)(tex_color[2]*255.f)};
-			buffer::fragment::plot(cbuf,cols);
+			res_color[0]=(cbuf_type)(tex_color[0]*255.f);
+			res_color[1]=(cbuf_type)(tex_color[1]*255.f);
+			res_color[2]=(cbuf_type)(tex_color[2]*255.f);
+			res_color[3]=(cbuf_type)(tex_color[3]*255.f);
+
 // 			*cbuf++=(int)(tex_color[0]*255.f);
 // 			*cbuf++=(int)(tex_color[1]*255.f);
 // 			*cbuf++=(int)(tex_color[2]*255.f);
@@ -954,7 +959,7 @@ namespace raster
 			SETUP_ATTRIB_P(___F,f1);
 			SETUP_DATTRIB_P(___F,f2);
 		}
-		void plot(GLubyte* cbuf,GLuint* zbuf,GLfloat w,GLfloat* att_p_w,TextureObject* texobj)
+		void fragment(GLfloat w,GLfloat* att_p_w,cbuf_type* flat_color,TextureObject* texobj,cbuf_type* res_color)
 		{
 			GLfloat s,t,f;
 			s=GET_ATTRIB_P(___S);
@@ -972,9 +977,10 @@ namespace raster
 			// 			*cbuf++=(int)(tex_color[2]*GET_ATTRIB_P(___B));
 
 			// GL_REPLACE
-			*cbuf++=(int)(tex_color[0]*factor);
-			*cbuf++=(int)(tex_color[1]*factor);
-			*cbuf++=(int)(tex_color[2]*factor);
+			res_color[0]=(cbuf_type)(tex_color[0]*factor);
+			res_color[1]=(cbuf_type)(tex_color[1]*factor);
+			res_color[2]=(cbuf_type)(tex_color[2]*factor);
+			res_color[3]=(cbuf_type)(tex_color[3]*factor);
 		}
 #undef ___R
 #undef ___G
@@ -1268,9 +1274,10 @@ namespace raster
 					// !!!!!check
 					//cbuf=buffer::framebuf_ptr(ROUND(lefte->cur_x),y);
 
-					lefte->fill_span(righte,buffer::framebuf_ptr(ROUND(lefte->curx),y),
-						buffer::depthbuf_ptr(ROUND(lefte->curx),y),
-						flat_color,texobj);
+// 					lefte->fill_span(righte,buffer::framebuf_ptr(ROUND(lefte->curx),y),
+// 						buffer::depthbuf_ptr(ROUND(lefte->curx),y),
+// 						flat_color,texobj);
+					lefte->fill_span(y,righte,flat_color,texobj);
 
 					nexte=righte->next;
 
@@ -1305,4 +1312,7 @@ namespace raster
 		// cleanup
 		aet.free();
 	}
+
+	
+}
 }

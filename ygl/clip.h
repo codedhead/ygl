@@ -5,6 +5,7 @@
 struct Vertex;
 using namespace ygl;
 
+namespace ygl{
 namespace clip
 {
 	// is it linear in clip space??
@@ -15,6 +16,7 @@ namespace clip
 	// result store in clip_buf
 	// vertex passed and clipped in homogeneous space
 	GLboolean polygon(Vertex* clip_buf,GLint vcnt,GLint* clip_cnt);
+}
 }
 
 

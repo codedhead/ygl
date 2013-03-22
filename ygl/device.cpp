@@ -19,7 +19,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
+namespace ygl{
 namespace device
 {
 	LARGE_INTEGER pc1,pc2;
@@ -60,7 +60,7 @@ namespace device
 
 		glRasterPos2i(l,b);
 #endif
-		glDrawPixels(w, h,GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		glDrawPixels(w, h,GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 		glFlush();
 
 // 		QueryPerformanceCounter(&pc2);
@@ -109,4 +109,5 @@ namespace device
 // 		SetDIBitsToDevice(bindDC,l,t,r-l,b-t,0,0,0,b-t,buffer,&bmpInfo,DIB_RGB_COLORS);
 // 	}
 #endif
+}
 }

@@ -1,3 +1,75 @@
+unify fragment shader, pass perspective corrected attribs
+3.19
+/* bug */
+interp between span int(left),int(right), scan between int(ymin),int(ymax) might cause the texture bilinear filter bug
+use float instead, dx, dy
+
+texture border. for GL_CLAMP on edge
+bitset bug, 
+texture on back side always has an edge??
+
+top-left?? box edge
+z-buffer how to 32bit....
+
+lerping when clipping
+
+/* feature */
+polygon mode // stipple, polygon offset
+
+
+// vertex array
+strips and loops, and polygons,triangulation?
+edge flag
++ fog
+//aa(1line, thick-line), polygon edge?
+//texture mipmap
+
+
+// debug render z-buffer
+// http://en.wikipedia.org/wiki/Z-buffering
+
+
+
+
+//accum?
+pixel,bitmap, rasterpos?
+//select feedback
+
+
+
+/* optimization */
+
+early z test
+perspective correction at each N pixels, not all
+
+clamp col_front_pri early
+use self definded marco in switch-case, -> lookup table?
+depth mask, color mask, can skip calculation properly
+use c macro generate different versions of ETRecord, buffer::plot, select based on glstates
+remove redundant headers, like stdio.h
+merge cpp, use inline
+some macro expand, eval too many time? efficiency, like CLAMP_MIN_MAX
+
+sse-> rgba, xyzw, clear
+http://www.codeproject.com/Articles/68243/Heresy-II-Why-4D-Homogeneous-Transform-Clip-Projec
+
+
+
+face num>=100, concave, obj
+
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////
 thread-safe modelview matrix
 
 tri-fans same as convex polygon?
@@ -14,66 +86,32 @@ Parallel algorithm: process each scan line in
 one processor. Each scan line is independent
 
 
-remove redundant headers, like stdio.h
-merge cpp, use inline
-
-3.19
-interp between span int(left),int(right), scan between int(ymin),int(ymax) might cause the texture bilinear filter bug
-use float instead, dx, dy
-
-texture border. for GL_CLAMP on edge
-
-depth mask, color mask
-
-bitset bug
 
 3.18
-texture on back side always has an edge??
-smooth bug(must triangulation)
-clamp col_front_pri early
+
+//smooth bug(must triangulation)
+
+
 
 3.17
-blending per fragment + fog
-stencil
 
-aa
-
-select feedback
-pixel,bitmap
 display list
 array, buffer
-
-3.16
-top-left?? box edge
-z-buffer how to 32bit....
 
 3.15
 // is it linear in clip space?? lerp attribs
 dont do repeated  calc, like translate fcolor to 255color first
 
-cube top face color smooth ,wrong, flash
-
-
 line clipping bug
-strips and loops, and polygons
 spheres
 
 clipping behind camera problem?? boudary width 480 (0,479), in glViewport
 
-//culling,
-// zbuffer depth test
-alpha blend, texture
-
 scanline exceptions
-mipmaping
 
 3.14
 
-some macro expand, eval too many time? efficiency, like CLAMP_MIN_MAX
-
 clipspace 0,0,0 1,1,1 more efficient?
-
-lighting, 
 
 
 anti alias (line, with width, point)

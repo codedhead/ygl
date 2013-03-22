@@ -811,12 +811,6 @@ void glCullFace(GLenum mode);
 void glShadeModel(GLenum mode);
 void glDepthRange(GLclampd n, GLclampd f);
 
-void glDepthFunc(GLenum func);
-void glDepthMask(GLboolean flag);
-
-void glClear(GLbitfield mask);
-void glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
-void glClearDepth(GLclampd depth);
 void glFlush();
 void glFinish();
 
@@ -838,8 +832,41 @@ void glFogfv(GLenum pname, const GLfloat *params);
 // ALERT!! from 1.3??
 void glGenerateMipmap(GLenum target);
 
+/* buffer */
+// no support for DrawBufferMode, accum buffer
+// void glDrawBuffer(GLenum mode);
+void glDepthMask(GLboolean flag);
+void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+void glStencilMask(GLuint mask);
+void glClear(GLbitfield mask);
+void glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
+void glClearDepth(GLclampd depth);
+void glClearStencil(GLint s);
+/* fragment op */
+void glScissor(GLint x, GLint y, GLsizei width, GLsizei height);
+void glDepthFunc(GLenum func);
+void glAlphaFunc(GLenum func, GLclampf ref);
+void glStencilFunc(GLenum func, GLint ref, GLuint mask);
+void glStencilOp(GLenum sfail,GLenum dpfail,GLenum dppass);
+void glBlendFunc(GLenum sfactor, GLenum dfactor);
+void glLogicOp(GLenum opcode);
+
 //void glTexGenf(GLenum coord, GLenum pname, GLfloat param);
 //void glTexGenfv(GLenum coord, GLenum pname, const GLfloat *params);
+
+/* client state */
+void glEnableClientState(GLenum array);
+void glDisableClientState(GLenum array);
+void glColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+void glEdgeFlagPointer(GLsizei stride, const GLvoid *pointer);
+//void glIndexPointer(GLenum type, GLsizei stride, const GLvoid *pointer);
+void glNormalPointer(GLenum type, GLsizei stride, const GLvoid *pointer);
+void glTexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+void glVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+void glArrayElement(GLint i);
+void glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+void glDrawArrays(GLenum mode, GLint first, GLsizei count);
+void glInterleavedArrays(GLenum format, GLsizei stride, const GLvoid *pointer);
 
 }//end namespace
 

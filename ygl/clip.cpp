@@ -10,7 +10,7 @@
 
 //#define IMAGE_PLANE_LERP_TO_WORLD_LERP(u,z1,z2) ((u)*(z1)/((z2)+(u)*((z1)-(z2))))
 #define IMAGE_PLANE_LERP_TO_WORLD_LERP(u,z1,z2) (u)
-
+namespace ygl{
 namespace clip
 {
 	// liang-barsky blinn
@@ -215,4 +215,5 @@ clip_plane_start:
 // 			clip_buf[i]=*verts[i];
 // 		return true;
 	}
+}
 }
