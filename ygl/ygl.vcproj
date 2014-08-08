@@ -171,10 +171,6 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\!!discard.tt"
-				>
-			</File>
-			<File
 				RelativePath=".\buffer.cpp"
 				>
 			</File>
@@ -292,22 +288,22 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="test"
+			Name="examples"
 			>
 			<File
-				RelativePath=".\TEST\mesh\geom.h"
+				RelativePath="..\examples\mesh\geom.h"
 				>
 			</File>
 			<File
-				RelativePath=".\TEST\mesh\mesh_main.cpp"
+				RelativePath="..\examples\mesh\mesh_main.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\TEST\mesh\trimesh.cpp"
+				RelativePath="..\examples\mesh\trimesh.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\TEST\mesh\trimesh.h"
+				RelativePath="..\examples\mesh\trimesh.h"
 				>
 			</File>
 		</Filter>
