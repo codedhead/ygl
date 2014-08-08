@@ -11,7 +11,6 @@ class bitset
 {
 public:
 	// Assert(size_>0)
-	// reserve 0
 	bitset():size_(BITS_COUNT),cnt_(BITS_COUNT_TO_UNIT_COUNT(BITS_COUNT))
 	{
 
@@ -19,7 +18,7 @@ public:
 
 	bool operator[](int pos)
 	{
-		if(pos<0||pos>=size_) return true;
+		if(pos<0||pos>=size_) return false;
 		int base=pos/BITSET_UNIT;
 		int rem=pos%BITSET_UNIT;
 		uchar bit=bits_[base];
@@ -27,9 +26,8 @@ public:
 	}
 
 	// wrap
-	int lowest0(int begin=-1,bool set=true)
+	int lowest0(int begin=0,bool set=true)
 	{
-		++begin;
 		if(begin<0||begin>=size_) begin=0;
 		int base=begin/BITSET_UNIT;
 		int rem=begin%BITSET_UNIT;
@@ -79,12 +77,8 @@ public:
 		bits_[base]&=(uchar)~((uchar)(1<<rem));
 	}
 
-
-
-	inline int how_many_bits(){return size_;}
-
-private:
 	int size_; // how many bits
+private:
 	int cnt_; // how many uchars
 	uchar bits_[BITS_COUNT_TO_UNIT_COUNT(BITS_COUNT)];
 };

@@ -1,28 +1,106 @@
-unify fragment shader, pass perspective corrected attribs
+//unify fragment shader, pass perspective corrected attribs
+
+
+obtain the vtable function pointer, add the offset to object address?
 3.19
 /* bug */
-interp between span int(left),int(right), scan between int(ymin),int(ymax) might cause the texture bilinear filter bug
-use float instead, dx, dy
+// (float->int offset!!! compensate ) prestep
+// interp between span int(left),int(right), scan between int(ymin),int(ymax) might cause the texture bilinear filter bug
+// use float instead, dx, dy
 
-texture border. for GL_CLAMP on edge
-bitset bug, 
-texture on back side always has an edge??
+/????/ texture on back side always has an edge??
 
-top-left?? box edge
-z-buffer how to 32bit....
+/????/no persp correction when clipping?? proof it
+/????/lerping when clipping
+/????/IMAGE_PLANE_LERP_TO_WORLD_LERP has problem (see scanline_tri, beta)   z lerp wrong??
+// interpolating linearly in world space / clip space??
+http://gamedev.stackexchange.com/questions/29478/silly-question-about-perspective-correct-texture-mapping
 
-lerping when clipping
+// bug!!!! fan triangulation not stable??, alpha -> beta ,use w, not z
+// also do triangulation when assemble
+
+triangle->single line  // todo: interpolation btwn v0,2 might be wrong
+
+/xxxxxx/ edge flag when doing triangulation when assemble
+
+// for GL_CLAMP on edge, refer to spec
+// bitset bug, 
+
+y1==y2==y3 always no draw bug??
+
+line loop bug
+
+the mirror sample
+
+
+check: clipping behind camera?? w<0
+check: fog clamp [0,1]
+check: mipmap write out the generated images?
+check: array pointer
+
+demo (obj) sponzar, mirror(stencil buffer), alpha blend, fog, lighting, 3dsmax like scene operation
+
+
+
+
+// z-buffer how to 32bit....
+/xxxxxx/ BitBlt
+
+
+name list
+
+raster bug top left
+
+// when will dda overflow (long)
+
 
 /* feature */
-polygon mode // stipple, polygon offset
 
 
+
+
+
+
+// perpixel lighting
+
+two-sided lighting
+check parameter, error code handling
+
+// texture mipmap dudx, dvdx
+
+/xxxxx/ render z buffer
+/xxxxx/ texture border support
+
+
+
+
+
+
+
+
+
+
+
+
+gl_fog_hint, fog per vertex
+
+
+// pixel center(0.5), top left fill
+
+/xxxxx/ polygon mode
+/xxxxx/ aa(1line, thick-line), polygon edge?
+/xxxxx/ stipple, polygon offset
+
+// fog
+// tex env mode
+// edge flag
 // vertex array
-strips and loops, and polygons,triangulation?
-edge flag
-+ fog
-//aa(1line, thick-line), polygon edge?
-//texture mipmap
+// strips and loops, and polygons,//triangulation?
+
+
+http://www.cnblogs.com/danod/archive/2012/08/16/2641663.html mipmap lod
+
+
 
 
 // debug render z-buffer
@@ -30,17 +108,17 @@ edge flag
 
 
 
-
-//accum?
-pixel,bitmap, rasterpos?
-//select feedback
+/xxxxx/accum?
+/xxxxx/pixel,bitmap, rasterpos?
+/xxxxx/select feedback
 
 
 
 /* optimization */
 
 early z test
-perspective correction at each N pixels, not all
+sse-> rgba, xyzw, clear
+/xxxxx/perspective correction at each N pixels, not all, subd affine
 
 clamp col_front_pri early
 use self definded marco in switch-case, -> lookup table?
@@ -50,12 +128,12 @@ remove redundant headers, like stdio.h
 merge cpp, use inline
 some macro expand, eval too many time? efficiency, like CLAMP_MIN_MAX
 
-sse-> rgba, xyzw, clear
+
 http://www.codeproject.com/Articles/68243/Heresy-II-Why-4D-Homogeneous-Transform-Clip-Projec
 
 
 
-face num>=100, concave, obj
+face num>=100, concave, obj, rotate translate scale like 3dsmax, rotate view
 
 
 

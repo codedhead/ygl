@@ -15,8 +15,8 @@ namespace buffer
 		write_z,write_r,write_g,write_b,write_a;
 	extern sbuf_type write_s_mask;
 
-	GLubyte* framebuf_ptr(GLint x,GLint y);
-	GLuint* depthbuf_ptr(GLint x,GLint y);
+	cbuf_type* framebuf_ptr(GLint x,GLint y);
+	zbuf_type* depthbuf_ptr(GLint x,GLint y);
 
 // 	typedef void (*plot_ubytef_func)(GLint x,GLint y,GLfloat z,GLfloat* col);
 // 	typedef void (*plot_ubyte_func)(GLint x,GLint y,GLfloat z,GLubyte* col);

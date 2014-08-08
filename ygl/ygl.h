@@ -10,7 +10,7 @@
 #include "ygltypes.h"
 
 namespace ygl{
-
+/* translate from http://www.opengl.org/registry/api/enumext.spec */
 enum VERSION_1_1_enum{
 	/* VERSION_1_1 enum: */
 	GL_VERSION_1_1					= 1,
@@ -605,72 +605,19 @@ enum VERSION_1_1_enum{
 	 GL_LIGHT6						= 0x4006,/*# 1 I	# LightName*/
 	 GL_LIGHT7						= 0x4007,/*# 1 I	# LightName*/
 };
-/*
-// has param but no number
-#define DECLARE_GLFUNC_0(name,type,full_type) void gl##name##type##(full_type x);
-#define DECLARE_GLFUNC_1(name,type,full_type) void gl##name##1##type##(full_type x);
-#define DECLARE_GLFUNC_2(name,type,full_type) void gl##name##2##type##(full_type x,full_type y);
-#define DECLARE_GLFUNC_3(name,type,full_type) void gl##name##3##type##(full_type x,full_type y,full_type z);
-#define DECLARE_GLFUNC_4(name,type,full_type) void gl##name##4##type##(full_type x,full_type y,full_type z,full_type w);
-#define DECLARE_GLFUNC_V0(name,type,full_type) void gl##name##type##(full_type* v);
-#define DECLARE_GLFUNC_V1(name,type,full_type) void gl##name##1##type##(full_type* v);
-#define DECLARE_GLFUNC_V2(name,type,full_type) void gl##name##2##type##v(full_type* v);
-#define DECLARE_GLFUNC_V3(name,type,full_type) void gl##name##3##type##v(full_type* v);
-#define DECLARE_GLFUNC_V4(name,type,full_type) void gl##name##4##type##v(full_type* v);
-
-#define DECLARE_GLFUNC_0V(name,type,full_type) DECLARE_GLFUNC_0(name,type,full_type)\
-	DECLARE_GLFUNC_V0(name,type,full_type)
-#define DECLARE_GLFUNC_1V(name,type,full_type) DECLARE_GLFUNC_1(name,type,full_type)\
-	DECLARE_GLFUNC_V1(name,type,full_type)
-#define DECLARE_GLFUNC_1V(name,type,full_type) DECLARE_GLFUNC_1(name,type,full_type)\
-	DECLARE_GLFUNC_V1(name,type,full_type)
-#define DECLARE_GLFUNC_2V(name,type,full_type) DECLARE_GLFUNC_2(name,type,full_type)\
-	DECLARE_GLFUNC_V2(name,type,full_type)
-#define DECLARE_GLFUNC_3V(name,type,full_type) DECLARE_GLFUNC_3(name,type,full_type)\
-	DECLARE_GLFUNC_V3(name,type,full_type)
-#define DECLARE_GLFUNC_4V(name,type,full_type) DECLARE_GLFUNC_4(name,type,full_type)\
-	DECLARE_GLFUNC_V4(name,type,full_type)
 
 
-// #define DECLARE_GLFUNC_234V(name,type,full_type) DECLARE_GLFUNC_2(name,type,full_type)\
-// 	DECLARE_GLFUNC_3(name,type,full_type)\
-// 
-// #define DECLARE_GLFUNC_234V(name,type,full_type) DECLARE_GLFUNC_2(name,type,full_type)\
-// 	DECLARE_GLFUNC_3(name,type,full_type)\
-// 	DECLARE_GLFUNC_4(name,type,full_type)\
-// 	DECLARE_GLFUNC_2V(name,type,full_type)\
-// 	DECLARE_GLFUNC_3V(name,type,full_type)\
-// 	DECLARE_GLFUNC_4V(name,type,full_type)
+// auto generate mipmap from 1.4
+enum VERSION_1_4_enum{
+	GL_GENERATE_MIPMAP				= 0x8191,
+};
+// ALERT!! from 1.3??
+// void glGenerateMipmap(GLenum target);
 
-#define DECLARE_GLFUNC_1V_bsifd(name) \
-	DECLARE_GLFUNC_1V(name,b,GLbyte)
-	DECLARE_GLFUNC_1V(name,s,GLshort)\
-	DECLARE_GLFUNC_1V(name,i,GLint)\
-	DECLARE_GLFUNC_1V(name,f,GLfloat)\
-	DECLARE_GLFUNC_1V(name,d,GLdouble)
-
-#define DECLARE_GLFUNC_1V_bsifdu(name) \
-	DECLARE_GLFUNC_1V_bsifd(name)\
-	DECLARE_GLFUNC_1V(name,ub,GLubyte)
-	DECLARE_GLFUNC_1V(name,us,GLushort)\
-	DECLARE_GLFUNC_1V(name,ui,GLuint)
-
-
-#define DECLARE_GLFUNC_234V_bsifd(name) \
-	DECLARE_GLFUNC_234V(name,f,GLfloat)\
-	DECLARE_GLFUNC_234V(name,d,GLdouble)\
-	DECLARE_GLFUNC_234V(name,s,GLshort)\
-	DECLARE_GLFUNC_234V(name,i,GLint)\
-	DECLARE_GLFUNC_234V(name,us,GLushort)\
-	DECLARE_GLFUNC_234V(name,ui,GLuint)
-
-
-
-DECLARE_GLFUNC_234V_bsifd(Vertex)
-DECLARE_GLFUNC_234V_bsifd(Color)
-DECLARE_GLFUNC_234V_bsifd(Normal)*/
-
-
+// todo: per-pixel lighting
+// enum YGL_EXTENSION_enum{
+// 	GL_PER_PIXEL						= 0x1D02,/*# ShadingModel*/
+// };
 
 void glEnable(GLenum cap);
 void glDisable(GLenum cap);
@@ -686,6 +633,12 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
 // #define glVertex3f(x,y,z) glVertex4f(x,y,z,1.f)
 // #define glVertex2fv(v) glVertex4f((v)[0],(v)[1],0.f,1.f)
 // #define glVertex3fv(v) glVertex4f((v)[0],(v)[1],(v)[2],1.f)
+inline void glVertex4i(GLint x, GLint y, GLint z, GLint w){ glVertex4f(x,y,z,w); }
+inline void glVertex4iv(const GLint* v){ glVertex4f(v[0],v[1],v[2],v[3]); }
+inline void glVertex2i(GLint x, GLint y){ glVertex4f(x,y,0.f,1.f); }
+inline void glVertex3i(GLint x, GLint y, GLint z){ glVertex4f(x,y,z,1.f); }
+inline void glVertex2iv(const GLint* v){ glVertex4f(v[0],v[1],0.f,1.f); }
+inline void glVertex3iv(const GLint* v){ glVertex4f(v[0],v[1],v[2],1.f); }
 
 inline void glVertex4fv(const GLfloat* v){ glVertex4f(v[0],v[1],v[2],v[3]); }
 inline void glVertex2f(GLfloat x, GLfloat y){ glVertex4f(x,y,0.f,1.f); }
@@ -700,6 +653,12 @@ void glColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
 inline void glColor3f(GLfloat r,GLfloat g,GLfloat b){ glColor4f(r,g,b,1.f); }
 inline void glColor3fv(const GLfloat* v){ glColor4f(v[0],v[1],v[2],1.f); }
 inline void glColor4fv(const GLfloat *v){ glColor4f(v[0],v[1],v[2],v[3]); }
+
+#define C_UB_2_F(ic) (((GLfloat)(ic))/255.f)
+inline void glColor3ub(GLubyte r,GLubyte g,GLubyte b){ glColor4f(C_UB_2_F(r),C_UB_2_F(g),C_UB_2_F(b),1.f); }
+inline void glColor3ubv(const GLubyte* v){ glColor4f(C_UB_2_F(v[0]),C_UB_2_F(v[1]),C_UB_2_F(v[2]),1.f); }
+inline void glColor4ubv(const GLubyte *v){ glColor4f(C_UB_2_F(v[0]),C_UB_2_F(v[1]),C_UB_2_F(v[2]),C_UB_2_F(v[3])); }
+#undef C_UB_2_F
 
 void glSecondaryColor3f(GLfloat red, GLfloat green, GLfloat blue/*, GLfloat alpha = 0.f*/);
 //#define glSecondaryColor3fv(v) glSecondaryColor3f((v)[0],(v)[1],(v)[2])
@@ -748,17 +707,18 @@ inline void glMultiTexCoord3fv(GLenum tex, const GLfloat*v){ glMultiTexCoord4f(t
 
 void glEdgeFlag(GLboolean flag);
 
-void glRasterPos4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
+// no support
+// void glRasterPos4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
 // #define glRasterPos4fv(v) glRasterPos4f((v)[0],(v)[1],(v)[2],(v)[3])
 // #define glRasterPos2f(x,y,z) glRasterPos4f(x,y,0.f,1.f)
 // #define glRasterPos3f(x,y,z) glRasterPos4f(x,y,z,1.f)
 // #define glRasterPos2fv(v) glRasterPos4f(v[0],v[1],0.f,1.f)
 // #define glRasterPos3fv(v) glRasterPos4f(v[0],v[1],v[2],1.f)
-inline void glRasterPos4fv(const GLfloat* v){ glRasterPos4f(v[0],v[1],v[2],v[3]); }
-inline void glRasterPos2f(GLfloat x, GLfloat y, GLfloat z){ glRasterPos4f(x,y,0.f,1.f); }
-inline void glRasterPos3f(GLfloat x, GLfloat y, GLfloat z){ glRasterPos4f(x,y,z,1.f); }
-inline void glRasterPos2fv(const GLfloat* v){ glRasterPos4f(v[0],v[1],0.f,1.f); }
-inline void glRasterPos3fv(const GLfloat* v){ glRasterPos4f(v[0],v[1],v[2],1.f); }
+// inline void glRasterPos4fv(const GLfloat* v){ glRasterPos4f(v[0],v[1],v[2],v[3]); }
+// inline void glRasterPos2f(GLfloat x, GLfloat y, GLfloat z){ glRasterPos4f(x,y,0.f,1.f); }
+// inline void glRasterPos3f(GLfloat x, GLfloat y, GLfloat z){ glRasterPos4f(x,y,z,1.f); }
+// inline void glRasterPos2fv(const GLfloat* v){ glRasterPos4f(v[0],v[1],0.f,1.f); }
+// inline void glRasterPos3fv(const GLfloat* v){ glRasterPos4f(v[0],v[1],v[2],1.f); }
 
 void glRectf(GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2);
 // #define glRectfv(v1,v2) glRectf((v1)[0],(v1)[1],(v2)[0],(v2)[1])
@@ -774,7 +734,7 @@ void glLightModeli(GLenum pname, GLint param);
 void glLightModeliv(GLenum pname, const GLint *params);
 void glColorMaterial(GLenum face, GLenum mode);
 
-// low-left (x,y)
+// lower-left corner (x,y)
 void glViewport(GLint x, GLint y, GLsizei width, GLsizei height);
 
 /* projection */
@@ -795,11 +755,6 @@ void glMultMatrixf(const GLfloat *m);
 void glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
 void glTranslatef(GLfloat x, GLfloat y, GLfloat z);
 void glScalef(GLfloat x, GLfloat y, GLfloat z);
-
-/*	
-	todo:
-	vertex array
-*/
 
 /*	
 	todo:
@@ -824,16 +779,16 @@ void glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params);
 void glTexEnvi(GLenum target, GLenum pname, GLint param);
 void glTexEnvfv(GLenum target, GLenum pname, GLfloat* params);
 //void glTexGeni(GLenum coord, GLenum pname, GLint param);
+//void glTexGenf(GLenum coord, GLenum pname, GLfloat param);
+//void glTexGenfv(GLenum coord, GLenum pname, const GLfloat *params);
 
 /* fog */
 void glFogi(GLenum pname, GLint param);
+void glFogf(GLenum pname, GLfloat param);
 void glFogfv(GLenum pname, const GLfloat *params);
 
-// ALERT!! from 1.3??
-void glGenerateMipmap(GLenum target);
-
 /* buffer */
-// no support for DrawBufferMode, accum buffer
+// no support for DrawBufferMode, accumulation buffer
 // void glDrawBuffer(GLenum mode);
 void glDepthMask(GLboolean flag);
 void glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
@@ -851,9 +806,6 @@ void glStencilOp(GLenum sfail,GLenum dpfail,GLenum dppass);
 void glBlendFunc(GLenum sfactor, GLenum dfactor);
 void glLogicOp(GLenum opcode);
 
-//void glTexGenf(GLenum coord, GLenum pname, GLfloat param);
-//void glTexGenfv(GLenum coord, GLenum pname, const GLfloat *params);
-
 /* client state */
 void glEnableClientState(GLenum array);
 void glDisableClientState(GLenum array);
@@ -867,6 +819,21 @@ void glArrayElement(GLint i);
 void glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 void glDrawArrays(GLenum mode, GLint first, GLsizei count);
 void glInterleavedArrays(GLenum format, GLsizei stride, const GLvoid *pointer);
+
+// pixel
+void glPixelStorei(GLenum pname, GLint param);
+
+// hint
+void glHint(GLenum target, GLenum mode);
+
+GLenum glGetError();
+
+// query
+void glGetFloatv(GLenum pname, GLfloat *params);
+
+// attribs
+void glPushAttrib(GLbitfield mask);
+void glPopAttrib();
 
 }//end namespace
 

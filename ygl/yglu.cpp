@@ -23,7 +23,7 @@ namespace ygl{
 	void gluLookAt(GLdouble eyex, GLdouble eyey, GLdouble eyez, GLdouble centerx, GLdouble centery, GLdouble centerz, GLdouble upx, GLdouble upy, GLdouble upz)
 	{
 		GLfloat m[16];
-		// todo: handle sigularity case??
+		// todo: sigularity case??
 		Vector n,u(upx,upy,upz),v,eye(eyex,eyey,eyez);
 		n.x=eyex-centerx;n.y=eyey-centery;n.z=eyez-centerz;
 		n.normalize();

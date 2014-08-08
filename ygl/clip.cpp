@@ -2,17 +2,21 @@
 #include "glcontext.h"
 #include "global.h"
 
-#define LERP_COMPONENT_4(dst,comp,va,vb,f) \
-	(dst)->##comp##[0]=lerp((va)->##comp##[0],(vb)->##comp##[0],f);\
-	(dst)->##comp##[1]=lerp((va)->##comp##[1],(vb)->##comp##[1],f);\
-	(dst)->##comp##[2]=lerp((va)->##comp##[2],(vb)->##comp##[2],f);\
-	(dst)->##comp##[3]=lerp((va)->##comp##[3],(vb)->##comp##[3],f);
 
 //#define IMAGE_PLANE_LERP_TO_WORLD_LERP(u,z1,z2) ((u)*(z1)/((z2)+(u)*((z1)-(z2))))
-#define IMAGE_PLANE_LERP_TO_WORLD_LERP(u,z1,z2) (u)
+//#define IMAGE_PLANE_LERP_TO_WORLD_LERP(u,z1,z2) (u)
 namespace ygl{
 namespace clip
 {
+	GLboolean point(const Vertex* vert)
+	{
+		GLfloat w=W_OF(vert->p);
+		return w>0.f&& // in front of camera
+			X_OF(vert->p)<=w&&X_OF(vert->p)>=-w&&
+			Y_OF(vert->p)<=w&&Y_OF(vert->p)>=-w&&
+			Z_OF(vert->p)<=w&&Z_OF(vert->p)>=-w;
+	}
+
 	// liang-barsky blinn
 	GLboolean line(const Vertex* a,const Vertex* b,Vertex* clip_buf)
 	{
@@ -73,7 +77,7 @@ namespace clip
 			LERP_COMPONENT_4(clip_buf,p,a,b,u1);
 
 			// persp correction??
-			u1=IMAGE_PLANE_LERP_TO_WORLD_LERP(u1,W_OF(a->p),W_OF(a->p));
+			//u1=IMAGE_PLANE_LERP_TO_WORLD_LERP(u1,W_OF(a->p),W_OF(a->p));
 			LERP_COMPONENT_4(clip_buf,col_front_pri,a,b,u1);
 			LERP_COMPONENT_4(clip_buf,tex_coords,a,b,u1);
 		}
@@ -86,7 +90,7 @@ namespace clip
 			LERP_COMPONENT_4(clip_buf+1,p,a,b,u2);
 
 			// persp correction??
-			u2=IMAGE_PLANE_LERP_TO_WORLD_LERP(u2,W_OF(a->p),W_OF(a->p));
+			//u2=IMAGE_PLANE_LERP_TO_WORLD_LERP(u2,W_OF(a->p),W_OF(a->p));
 			LERP_COMPONENT_4(clip_buf+1,col_front_pri,a,b,u2);
 			LERP_COMPONENT_4(clip_buf+1,tex_coords,a,b,u2);
 		}
@@ -149,10 +153,13 @@ clip_plane_start:
 					Assert(bc1!=bc2);
 					u=bc1/(bc1-bc2);
 
+					// edge flag, set the same as beginning vertex
+					pisect.edge_flag=p1->edge_flag;
+
 					LERP_COMPONENT_4(&pisect,p,p1,p2,u);
 
 					// persp correction??
-					u=IMAGE_PLANE_LERP_TO_WORLD_LERP(u,W_OF(p1->p),W_OF(p2->p));
+					//u=IMAGE_PLANE_LERP_TO_WORLD_LERP(u,-W_OF(p1->p),-W_OF(p2->p));
 					LERP_COMPONENT_4(&pisect,col_front_pri,p1,p2,u);
 					LERP_COMPONENT_4(&pisect,tex_coords,p1,p2,u);
 
@@ -164,10 +171,13 @@ clip_plane_start:
 					Assert(bc1!=bc2);
 					u=bc1/(bc1-bc2);
 
+					// edge flag, set the same as beginning vertex
+					pisect.edge_flag=p1->edge_flag;
+
 					LERP_COMPONENT_4(&pisect,p,p1,p2,u);
 
 					// persp correction??
-					u=IMAGE_PLANE_LERP_TO_WORLD_LERP(u,W_OF(p1->p),W_OF(p2->p));
+					//u=IMAGE_PLANE_LERP_TO_WORLD_LERP(u,-W_OF(p1->p),-W_OF(p2->p));
 					LERP_COMPONENT_4(&pisect,col_front_pri,p1,p2,u);
 					LERP_COMPONENT_4(&pisect,tex_coords,p1,p2,u);
 

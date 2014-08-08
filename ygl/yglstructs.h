@@ -11,6 +11,7 @@ struct Matrix44
 
 	Matrix44()
 	{
+		// identity
 		m[0]=1.0f;m[4]=0.0f;m[8]=0.0f;m[12]=0.0f;
 		m[1]=0.0f;m[5]=1.0f;m[9]=0.0f;m[13]=0.0f;
 		m[2]=0.0f;m[6]=0.0f;m[10]=1.0f;m[14]=0.0f;
@@ -26,11 +27,10 @@ struct Matrix44
 	// [ A-1  -A-1 . b]
 	void affine_inv(GLfloat* dstm) const // possible change
 	{
-		Assert(dstm!=this->m&&is_affine());
+		//Assert(dstm!=this->m&&is_affine());
 		float det=affine_det();
 		Assert(det!=0.f&&!isnan(det));
 		float invDet=1.f/det;
-		//float dstm[16];
 
 		dstm[0]=invDet*(m[5]*m[10]-m[6]*m[9]);
 		dstm[5]=invDet*(m[0]*m[10]-m[2]*m[8]);
@@ -47,7 +47,6 @@ struct Matrix44
 		dstm[12]=-(dstm[0]*m[12]+dstm[4]*m[13]+dstm[8]*m[14]);
 		dstm[13]=-(dstm[1]*m[12]+dstm[5]*m[13]+dstm[9]*m[14]);
 		dstm[14]=-(dstm[2]*m[12]+dstm[6]*m[13]+dstm[10]*m[14]);
-		//memcpy(dst,dstm,sizeof(float)*16);
 	}
 
 	GLboolean is_affine() const
@@ -62,8 +61,6 @@ struct Matrix44
 		v[1] = m[1]*x + m[5]*y + m[9]*z + m[13]*w;
 		v[2] = m[2]*x + m[6]*y + m[10]*z + m[14]*w;
 		v[3] = m[3]*x + m[7]*y + m[11]*z + m[15]*w;
-// 		float w   = m[3]*x + m[7]*y + m[11]*z + m[15];
-// 		if (w != 1.) *ptrans /= w;
 	}
 	void onP(const GLfloat* v,GLfloat* dst) const
 	{
@@ -72,8 +69,6 @@ struct Matrix44
 		dst[1] = m[1]*x + m[5]*y + m[9]*z + m[13]*w;
 		dst[2] = m[2]*x + m[6]*y + m[10]*z + m[14]*w;
 		dst[3] = m[3]*x + m[7]*y + m[11]*z + m[15]*w;
-		// 		float w   = m[3]*x + m[7]*y + m[11]*z + m[15];
-		// 		if (w != 1.) *ptrans /= w;
 	}
 
 	void onV(const GLfloat* v,GLfloat* dst) const
@@ -99,41 +94,38 @@ struct Matrix44
 // 		v[0] = m[0]*x + m[4]*y + m[8]*z + m[12]*w;
 // 		v[1] = m[1]*x + m[5]*y + m[9]*z + m[13]*w;
 // 		v[2] = m[2]*x + m[6]*y + m[10]*z + m[14]*w;
-//  }
-	// v!=dst
-// 	void onN(GLfloat* v,GLfloat* dst) const
-// 	{
-// 		// assume inverted??
-// 
-// 		GLfloat invm[9];
-// 		affine_inv(invm);
-// 		// use transpose
-// 
-// 	}
-// 	void onV(GLfloat* v) const
-// 	{
-// 
-// 	}
-	
+//  }
 };
 
 struct Vertex
 {
-// 	Vertex(GLfloat x,GLfloat y,GLfloat z,GLfloat w)
-// 	{
-// 		p[0]=x;p[1]=y;p[2]=z;p[3]=w;
-// 	}
-	GLfloat p[4];//x,y,z,w;
-	GLfloat col_front_pri[4],col_front_sec[4];
-	GLfloat col_back_pri[4],col_back_sec[4];
+	union
+	{
+//		union
+//		{
+		GLfloat p[4];
+// 		struct
+// 		{
+// 			GLfloat x,y;
+// 			GLuint zint; // zbuf_type
+// 			GLfloat w;
+// 		};
+// 		}
+		fixed_real p_fixed[4];
+	};
+	
+	GLfloat col_front_pri[4]/*,col_front_sec[4]*/;
+	GLfloat col_back_pri[4]/*,col_back_sec[4]*/;
+
+	GLfloat* col_pri;
+
 	GLfloat tex_coords[4];
 	GLfloat fog_coord;
-};
+	GLboolean edge_flag;
 
-struct VertAssocData
-{
-	// color
-	// boundary
+	// todo: per pixel lighting
+	//GLfloat p_eye_space[4];
+	//GLfloat n_eye_space[4];
 };
 
 #endif

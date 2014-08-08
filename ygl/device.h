@@ -6,7 +6,7 @@ namespace device
 {
 	//void resize(int w,int h);
 	void init();
-	void draw(void* buffer,int l,int b,int w,int h);
+	void draw(void* buffer,int l,int b,int w,int h,int linew);
 }
 }
 

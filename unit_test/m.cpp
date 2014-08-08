@@ -1,8 +1,5 @@
 
-#include "sphere.h"
-
 #define USE_YGL
-
 #ifdef USE_YGL
 #include "../ygl/ygl.h"
 #include "../ygl/yglu.h"
@@ -13,6 +10,11 @@ using namespace ygl;
 #include <stdio.h>
 //#include <dvec.h>
 #include <gl/glut.h>
+
+//#define TEST_ORTHO
+
+#define INIT_WIN_WIDTH 512
+#define INIT_WIN_HEIGHT 512
 
 
 float rot_angle=0.f;
@@ -38,7 +40,7 @@ void motion(int x, int y)
 	}
 	else if(btn==GLUT_LEFT_BUTTON)
 	{
-		//rot_angle+=x-old_x;
+		rot_angle+=x-old_x;
 		rot_x+=/*0.01f**/(old_x-x);
 		rot_y+=/*0.01f**/(old_y-y);
 		glutPostRedisplay();
@@ -59,7 +61,10 @@ void keyboard(unsigned char key, int x, int y)
 
 void idle()
 {
-	rot_angle+=0.8f;
+#ifdef TEST_ORTHO
+#else
+	//rot_angle+=0.8f;
+#endif
 	glutPostRedisplay();
 }
 
@@ -122,17 +127,17 @@ void drawWireBox(float halfSize)
 #define DRAW_TYPE GL_QUADS
 //#define DRAW_TYPE GL_LINE_LOOP
 
-	//glPolygonMode(GL_FRONT_AND_BACK,GL_POINT);
+	//glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 
 #define _LEFT_FACE
 #define _RIGHT_FACE
 #define _TOP_FACE
 #define _BOTTOM_FACE
-#define _FRONT_FACE
 #define _BACK_FACE
+#define _FRONT_FACE
 
 	int i=0;
-	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_2D);
 
 #ifdef _FRONT_FACE
 	glBegin(DRAW_TYPE);
@@ -212,12 +217,12 @@ void drawWireBox(float halfSize)
 
 
 
-int width = 512;  
-int height = 512;
+int width = INIT_WIN_WIDTH;  
+int height = INIT_WIN_HEIGHT;
 
-v4* sphere_data;
-#define SPHERE_SLICE 10
-#define SPHERE_STACK 10
+// v4* sphere_data;
+// #define SPHERE_SLICE 10
+// #define SPHERE_STACK 10
 
 // texture pixels must always exist
 GLfloat check_pixels[]={
@@ -263,8 +268,8 @@ void init()
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
 	glEnable(GL_NORMALIZE);
-	//glEnable(GL_RESC)
-	//glEnable(GL_LIGHTING);
+	
+	glEnable(GL_LIGHTING);
  	glEnable(GL_LIGHT0);	glEnable(GL_CULL_FACE);
 	glDepthFunc(GL_LESS);
 	glEnable(GL_DEPTH_TEST);
@@ -276,8 +281,8 @@ void init()
 
  	glGenTextures(1,&check_tex_name);
 	glBindTexture(GL_TEXTURE_2D,check_tex_name);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
@@ -285,17 +290,20 @@ void init()
 	GLfloat tex_border_col[4]={1.f,0.f,0.f,1.f};
 	glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,tex_border_col);
 
+	// no alignment
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1);
 	// border 0??
 	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,16,16,0,
 		GL_RGB,GL_FLOAT,check_pixels);
+	glPixelStorei(GL_UNPACK_ALIGNMENT,4);
  
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_FASTEST);
 
-	sphere_data=glxGenSphere(1.0,SPHERE_SLICE,SPHERE_STACK);
+	//sphere_data=glxGenSphere(1.0,SPHERE_SLICE,SPHERE_STACK);
 }
 void quit()
 {
-	if(sphere_data) glxFreeSphere(sphere_data);
+	//if(sphere_data) glxFreeSphere(sphere_data);
 }
 void reshape(int w, int h)  
 {
@@ -318,7 +326,7 @@ void display(void)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	//#define TEST_ORTHO
+	
 #ifdef TEST_ORTHO
 	gluOrtho2D(-width/2,width/2,-height/2,height/2);
 	glMatrixMode(GL_MODELVIEW);  
@@ -330,11 +338,10 @@ void display(void)
 	gluLookAt(0.,0.,4.,0,0.,0.,0.,1.,0.);
 #endif
 
-	//rot_angle=0.f;
-
 #ifdef TEST_ORTHO
 	glTranslatef(translate_x,translate_y,0.f);
-	//glRotatef(rot_angle,0.f,0.f,1.f);
+	//printf("rotate: %f\n",rot_angle);
+	glRotatef(rot_angle,0.f,0.f,1.f);
 
 	// 	glBegin(GL_LINES);
 	// 	glVertex2f(-0.25f*width,0);
@@ -362,10 +369,12 @@ void display(void)
 	//glColor3f(TRIPPLE_BLUE);
 	//glRectf(0,-0.5f*height,0.5f*width,0.5f*height);
 
-	glRectf(-0.5f*width,-0.5f*height,0.5f*width,0.5f*height);
+	glRectf(-0.25f*width,-0.25f*height,0.25f*width,0.25f*height);
 
 
 #else
+	//translate_x=22.f;translate_y=-109.f;rot_angle=-30.f;
+	//translate_x=16.f;translate_y=-103.f;rot_angle=157.f;
 	glTranslatef(0.01f*translate_x,0.01f*translate_y,0.f);
 	glRotatef(rot_angle,0.f,1.f,0.f);
 	//glRotatef(rot_y,1.f,0.f,0.f);
@@ -403,7 +412,7 @@ int main(int argc, char** argv)
 	//glEnable(GL_DEPTH_TEST);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);  
 	glutInitWindowPosition(50, 50);  
-	glutInitWindowSize(512,512);  
+	glutInitWindowSize(INIT_WIN_WIDTH,INIT_WIN_HEIGHT);  
 	glutInit(&argc, argv);  
 	glutCreateWindow("ygl");  
 

@@ -7,13 +7,13 @@ using namespace ygl;
 
 struct TexImage
 {
-	// internal format only support RGBA, GL_UNSIGNED_BYTE
+	// internal format only support RGBA, GL_UNSIGNED_BYTE, alignment 4!!(thus, if no border, no need to align)
 	GLint width,height,border;
-	//GLenum format,type;
+	//GLint internalformat;
 	GLubyte* pixels;
 };
 
-// [0,1] -> [0,width-1]??
+//GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
 struct TextureObject
 {
 	TextureObject(){ctor();}
@@ -23,11 +23,22 @@ struct TextureObject
 	GLuint /*name,*/dimension;
 	// GL_CLAMP_TO_BORDER GL_MIRRORED_REPEAT
 	GLint wrap_s,wrap_t,filter_min,filter_mag;
+	GLboolean auto_gen_mipmap;
 	GLfloat border_color[4];
 	TexImage mipmaps[YGL_TEXTURE_MAX_LEVEL];
+	GLfloat c;
+	GLint max_level;
 
-	void fetch(GLfloat s,GLfloat t,GLfloat* res);
-	
+	inline GLint width(){return mipmaps[0].width;}
+	inline GLint height(){return mipmaps[0].height;}
+
+	void fetch255(GLfloat rho,GLfloat s,GLfloat t,GLubyte* res);
+	void fetch(GLfloat rho,GLfloat s,GLfloat t,GLfloat* res);
+
+	void gen_mipmap();
+
+private:
+	void fetch255(TexImage* img,GLint filter_mode,GLfloat s,GLfloat t,GLubyte* res);
 };
 
 #endif

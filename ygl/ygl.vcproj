@@ -171,6 +171,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\!!discard.tt"
+				>
+			</File>
+			<File
 				RelativePath=".\buffer.cpp"
 				>
 			</File>
@@ -291,15 +295,19 @@
 			Name="test"
 			>
 			<File
-				RelativePath="..\unit_test\m.cpp"
+				RelativePath=".\TEST\mesh\geom.h"
 				>
 			</File>
 			<File
-				RelativePath="..\unit_test\sphere.cpp"
+				RelativePath=".\TEST\mesh\mesh_main.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\unit_test\sphere.h"
+				RelativePath=".\TEST\mesh\trimesh.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\TEST\mesh\trimesh.h"
 				>
 			</File>
 		</Filter>

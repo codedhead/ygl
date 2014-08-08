@@ -54,13 +54,21 @@ using namespace ygl;
 
 #define CHECK_ERROR
 
-// #define GET_RASTER_OPTION \
-// 	((glctx.smooth?raster::ETRecSmooth:0)|(glctx.texture?raster::ETRecTex:0))
 #define GET_RASTER_OPTION \
-	(glctx.shade_model==YGL_SMOOTH?raster::ETRecSmooth:0)|\
-	(YGL_IS_ENABLED(YGL_TEXTURE_2D)?raster::ETRecTex:0)|\
-	(YGL_IS_ENABLED(YGL_FOG)?raster::ETRecFog:0)
+	(glctx.shade_model==YGL_SMOOTH?raster::FragSmooth:raster::FragFlat)|\
+	(YGL_IS_ENABLED(YGL_TEXTURE_2D)?raster::FragTex:0)|\
+	(YGL_IS_ENABLED(YGL_FOG)?raster::FragFog:0)|\
+	(YGL_IS_FLAG_ENABLED(glctx.hint,YGL_PERSPECTIVE_CORRECTION_HINT)?raster::FragPersp:0)
 
+//#define GET_RASTER_OPTION raster::FragSmooth
+
+// GLenum GET_RASTER_OPTION()
+// {
+// 	bool s=(glctx.shade_model==YGL_SMOOTH);
+// 	unsigned long long t=(YGL_IS_ENABLED(YGL_TEXTURE_2D));
+// 	unsigned long long f=(YGL_IS_ENABLED(YGL_FOG));
+// 	return YGL_SMOOTH;
+// }
 
 // Caching
 #define SET_MVINV_CACHED_INVALID if(glctx.cur_matrix_mode==GL_MODELVIEW)glctx.cached_mv_inverse_valid=false;
@@ -70,9 +78,12 @@ GLContext glctx;
 GLContext::GLContext()
 {	
 	// viewport
-	// todo: check standard specification!!! about viewport?
-	viewport.ox=viewport.oy=viewport.w=viewport.h=0;
-	znear=0.f;zfar=1.f;
+	// todo: check standard specification!!! about viewport? should init as window size?
+	viewport.ox=(YGL_MAX_BUFFER_WIDTH>>1);
+	viewport.oy=(YGL_MAX_BUFFER_HEIGHT>>1);
+	viewport.w=YGL_MAX_BUFFER_WIDTH;
+	viewport.h=YGL_MAX_BUFFER_HEIGHT;
+	znear=0.;zfar=1.;
 
 	// matrix
 	cur_matrix_mode=GL_MODELVIEW;
@@ -154,13 +165,13 @@ GLContext::GLContext()
 	tex_targets[YGL_TEX_TARGET_1D]=tex_objs[0];
 	tex_targets[YGL_TEX_TARGET_2D]=tex_objs[0];
 	tex_env_mode=GL_MODULATE;
-	ASSIGN_V4_WITH(tex_env_color,0.f,0.f,0.f,0.f);
+	ASSIGN_V4_WITH(tex_env_color,0,0,0,0);
 
 	// fog
 	fog_mode=GL_EXP;
 	// fog_source=GL_FRAGMENT_DEPTH;
 	fog_density=fog_end=1.f;fog_start=0.f;
-	ASSIGN_V4_WITH(fog_color,0.f,0.f,0.f,0.f);
+	ASSIGN_V4_WITH(fog_color,0,0,0,0);
 	cached_fog_e_s=1.f;
 
 
@@ -189,6 +200,25 @@ GLContext::GLContext()
 	client_arrays[YGL_EDGE_FLAG_ARRAY].size=1;
 	//client_arrays[YGL_EDGE_FLAG_ARRAY].type=GL_BOOL;
 	client_arrays[YGL_NORMAL_ARRAY].size=3;
+
+	// pixel store
+	pixel_store.unpack_alignment=4;
+
+	// hint
+	YGL_SET_ENABLED_FLAG(glctx.hint,YGL_PERSPECTIVE_CORRECTION_HINT);
+}
+
+GLContext::~GLContext()
+{
+	// todo: use bitset
+	for(int i=0;i<YGL_TEXTURE_NAMES_MAX;++i)
+	{
+		if(tex_objs[i])
+		{
+			delete tex_objs[i];
+			tex_objs[i]=0;
+		}
+	}
 }
 
 // void GLContext::init(GLint width, GLint height)
@@ -252,7 +282,12 @@ inline void __viewport_transform(GLfloat* p)
 // 	FLOAT_AS_INT(Z_OF(p))=(GLuint)z_in_double;
 	
 	// 0,1
-	Z_OF(p)=((glctx.zfar-glctx.znear)*0.5f*Z_OF(p)+(glctx.zfar+glctx.znear)*0.5f);
+
+	//Z_OF(p)=((glctx.zfar-glctx.znear)*0.5*Z_OF(p)+(glctx.zfar+glctx.znear)*0.5);
+	
+
+	unsigned int zint=YGL_DEPTH_BUFFER_MAX_RES*((glctx.zfar-glctx.znear)*0.5*Z_OF(p)+(glctx.zfar+glctx.znear)*0.5);
+	FLOAT_AS_UINT(Z_OF(p))=zint;
 
 
 
@@ -286,7 +321,8 @@ inline GLfloat signed_area(Vertex* verts,int vcnt)
 #define PREPARE_FLATCOLOR \
 	flat_color[0]=YGL_COLOR_F2I(newv.col_front_pri[0]);\
 	flat_color[1]=YGL_COLOR_F2I(newv.col_front_pri[1]);\
-	flat_color[2]=YGL_COLOR_F2I(newv.col_front_pri[2]);
+	flat_color[2]=YGL_COLOR_F2I(newv.col_front_pri[2]);\
+	flat_color[3]=YGL_COLOR_F2I(newv.col_front_pri[3]);
 
 #define POLYGON_CLIP_AND_RASTERIZE(_vert_cnt_) \
 	PREPARE_FLATCOLOR;\
@@ -306,6 +342,10 @@ inline GLfloat signed_area(Vertex* verts,int vcnt)
 // 		raster::line(clip_buf);}
 #define LINE_RASTERIZE raster::line(clip_buf);
 
+GLenum glGetError()
+{
+	return glctx.last_error;
+}
 
 void glEnable(GLenum cap)
 {
@@ -365,6 +405,9 @@ void glEnable(GLenum cap)
 		break;
 	case GL_TEXTURE_2D:
 		YGL_ENABLE(YGL_TEXTURE_2D);
+		break;
+	case GL_FOG:
+		YGL_ENABLE(YGL_FOG);
 		break;
 	}
 	
@@ -428,6 +471,9 @@ void glDisable(GLenum cap)
 	case GL_TEXTURE_2D:
 		YGL_DISABLE(YGL_TEXTURE_2D);
 		break;
+	case GL_FOG:
+		YGL_DISABLE(YGL_FOG);
+		break;
 	}
 
 }
@@ -457,8 +503,8 @@ void glShadeModel(GLenum mode)
 void glDepthRange(GLclampd n, GLclampd f)
 {
 	// n can > f
-	glctx.znear=YGL_CLAMP_MIN_MAX(n,0.f,1.f);
-	glctx.zfar=YGL_CLAMP_MIN_MAX(f,0.f,1.f);
+	glctx.znear=YGL_CLAMP_MIN_MAX(n,0,1.);
+	glctx.zfar=YGL_CLAMP_MIN_MAX(f,0,1.);
 }
 void glFlush()
 {
@@ -478,6 +524,11 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
 {
 	CHECK_SIZEI(width)
 	CHECK_SIZEI(height)
+
+	// standard?? clamp it and inform user?
+	width=YGL_CLAMP_MAX(width,YGL_MAX_BUFFER_WIDTH);
+	height=YGL_CLAMP_MAX(height,YGL_MAX_BUFFER_WIDTH);
+
 	// todo: drop it, why use ox,oy
 	glctx.viewport.ox=x+width/2;
 	glctx.viewport.oy=y+height/2;
@@ -505,21 +556,25 @@ void glBegin(GLenum mode)
 		glctx.asm_state.line_strip.is_first=true;;
 		break;
 	case GL_LINE_LOOP:
-		glctx.asm_state.line_loop.complete_cnt=-1;
+		glctx.asm_state.line_loop.vcnt=0;
 		break;
 	case GL_TRIANGLES:
 		glctx.asm_state.tris.index=0;
 		break;
 	case GL_TRIANGLE_STRIP:
+		glctx.asm_state.tri_strip.vcnt=0;
+		glctx.asm_state.tri_strip.replace_index=0;
 		break;
+	// treat it as tri_fan
+	case GL_POLYGON:
 	case GL_TRIANGLE_FAN:
+		glctx.asm_state.tri_fan.vcnt=0;
 		break;
 	case GL_QUADS:
 		glctx.asm_state.quads.index=0;
 		break;
 	case GL_QUAD_STRIP:
-		break;
-	case GL_POLYGON:
+		glctx.asm_state.quad_strip.index=0;
 		break;
 	
 	default:
@@ -536,7 +591,7 @@ void glEnd()
 	switch(glctx.begin_type)
 	{
 	case GL_LINE_LOOP:
-		if(glctx.asm_state.line_loop.complete_cnt>1) // at least 3 verts
+		if(0)//glctx.asm_state.line_loop.vcnt>=3) // at least 3 verts
 		{
 			Vertex clip_buf[2];
 			if(clip::line(&glctx.asm_state.line_loop.prev_v,&glctx.asm_state.line_loop.first_v,clip_buf))
@@ -561,6 +616,7 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 	CHECK_IS_IN_BEGIN
 
 	Vertex newv;
+	newv.edge_flag=glctx.cur_edge_flag;
 	ASSIGN_V4_WITH(newv.p,x,y,z,w);
 
 	// mv matrix and lighting
@@ -599,110 +655,200 @@ void glVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 	//might use in flat shading
 	GLubyte flat_color[4]={255,255,255,255};
 
+	
+
 	switch(glctx.begin_type)
 	{
 	case GL_POINTS:
-		//clip();
+		if(clip::point(&newv))
+		{
+			CLIP_SPACE_TO_WINDOW(newv.p);
+			raster::point(&newv);
+		}
 		break;
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.lines)
 	case GL_LINES:
-		// negate and use previous value
-		if(!(glctx.asm_state.lines.is_odd=!glctx.asm_state.lines.is_odd))
-			glctx.asm_state.lines.odd_v=newv;
+		if(GLSTATE.is_odd) // next is odd
+			GLSTATE.odd_v=newv;
 		else
 		{
-			if(clip::line(&glctx.asm_state.lines.odd_v,&newv,clip_buf))
+			if(clip::line(&GLSTATE.odd_v,&newv,clip_buf))
 			{
 				CLIP_SPACE_TO_WINDOW_2(clip_buf);
 
 				LINE_RASTERIZE;
 			}
 		}
+		GLSTATE.is_odd=!GLSTATE.is_odd;
 		break;
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.line_strip)
 	case GL_LINE_STRIP:
-		if(glctx.asm_state.line_strip.is_first)
+		if(GLSTATE.is_first)
 		{
-			glctx.asm_state.line_strip.prev_v=newv;
-			glctx.asm_state.line_strip.is_first=false;
+			GLSTATE.is_first=false;
 		}
 		else
 		{
-			if(clip::line(&glctx.asm_state.line_strip.prev_v,&newv,clip_buf))
+			if(clip::line(&GLSTATE.prev_v,&newv,clip_buf))
 			{
 				CLIP_SPACE_TO_WINDOW_2(clip_buf);
 
 				LINE_RASTERIZE;
 			}
 		}
+		GLSTATE.prev_v=newv;
 		break;
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.line_loop)
 	case GL_LINE_LOOP:
-		if(glctx.asm_state.line_loop.complete_cnt==-1) // first vert
+		if(GLSTATE.vcnt==0) // first vert
 		{
-			glctx.asm_state.line_loop.first_v=newv;
-			glctx.asm_state.line_loop.complete_cnt=0;
+			GLSTATE.first_v=newv;
 		}
 		else
 		{
-			if(++glctx.asm_state.line_loop.complete_cnt>2)
-				glctx.asm_state.line_loop.complete_cnt=2;
-			
-			if(clip::line(&glctx.asm_state.line_loop.prev_v,&newv,clip_buf))
+			if(clip::line(&GLSTATE.prev_v,&newv,clip_buf))
 			{
 				CLIP_SPACE_TO_WINDOW_2(clip_buf);
 
 				LINE_RASTERIZE;
 			}
 		}
-		glctx.asm_state.line_loop.prev_v=newv;
+		++GLSTATE.vcnt;
+		GLSTATE.prev_v=newv;
 		break;
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.tris)
 	case GL_TRIANGLES:
-		///
-
-		// 		signed_area=...;
-		// 		if(!cull)
-		if(++glctx.asm_state.tris.index==3)
+		if(GLSTATE.index==2)
 		{
-			glctx.asm_state.tris.index=0;
+			GLSTATE.index=0;
 
-			// copy
-			clip_buf[0]=glctx.asm_state.tris.verts[0];
-			clip_buf[1]=glctx.asm_state.tris.verts[1];
+			// copy, due to clip even planes ( 6 planes ), result back in clip_buf
+			clip_buf[0]=GLSTATE.verts[0];
+			clip_buf[1]=GLSTATE.verts[1];
 			clip_buf[2]=newv;
 
 			POLYGON_CLIP_AND_RASTERIZE(3);
 		}
 		else
 		{
-			glctx.asm_state.tris.verts[glctx.asm_state.tris.index-1]=newv;
+			GLSTATE.verts[GLSTATE.index++]=newv;
 		}
-
 		break;
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.tri_strip)
 	case GL_TRIANGLE_STRIP:
-		break;
-	case GL_TRIANGLE_FAN:
-		break;
-	case GL_QUADS:
-		if(++glctx.asm_state.quads.index==4)
+		if(glctx.asm_state.tri_strip.vcnt<2)
 		{
-			glctx.asm_state.quads.index=0;
+			++GLSTATE.vcnt;
 
-			// copy
-			clip_buf[0]=glctx.asm_state.tris.verts[0];
-			clip_buf[1]=glctx.asm_state.tris.verts[1];
-			clip_buf[2]=glctx.asm_state.tris.verts[2];
-			clip_buf[3]=newv;
-
-			POLYGON_CLIP_AND_RASTERIZE(4);
+			GLSTATE.verts[GLSTATE.replace_index]=newv;
 		}
 		else
 		{
-			glctx.asm_state.quads.verts[glctx.asm_state.quads.index-1]=newv;
+			// we don't need it any more, glctx.asm_state.tri_strip.vcnt
+
+			clip_buf[0]=GLSTATE.verts[0];
+			clip_buf[1]=GLSTATE.verts[1];
+			clip_buf[2]=newv;
+			
+			POLYGON_CLIP_AND_RASTERIZE(3);
+
+			GLSTATE.verts[GLSTATE.replace_index]=newv;
 		}
-		break;
-	case GL_QUAD_STRIP:
-		break;
-	case GL_POLYGON:
+		GLSTATE.replace_index=!GLSTATE.replace_index;
 		break;
 
+		// assume convex, treat it like tri_fan
+	case GL_POLYGON:
+		// todo: edge flag
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.tri_fan)
+	case GL_TRIANGLE_FAN:
+		if(GLSTATE.vcnt<2)
+		{
+			GLSTATE.verts[GLSTATE.vcnt++]=newv;
+		}
+		else
+		{
+			clip_buf[0]=GLSTATE.verts[0];
+			clip_buf[1]=GLSTATE.verts[1];
+			clip_buf[2]=newv;
+
+			POLYGON_CLIP_AND_RASTERIZE(3);
+
+			GLSTATE.verts[1]=newv;
+		}
+		break;
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.quads)
+	case GL_QUADS:
+		if(GLSTATE.index==3)
+		{
+			GLSTATE.index=0;
+
+#ifdef DO_TRIANGULATION
+			// todo: edge flag
+			clip_buf[0]=GLSTATE.verts[0];
+			clip_buf[1]=GLSTATE.verts[1];
+			clip_buf[2]=GLSTATE.verts[2];
+			POLYGON_CLIP_AND_RASTERIZE(3);
+			
+
+			clip_buf[0]=GLSTATE.verts[2];
+			clip_buf[1]=newv;
+			clip_buf[2]=GLSTATE.verts[0];
+			POLYGON_CLIP_AND_RASTERIZE(3);
+#else
+			clip_buf[0]=GLSTATE.verts[0];
+			clip_buf[1]=GLSTATE.verts[1];
+			clip_buf[2]=GLSTATE.verts[2];
+			clip_buf[3]=newv;
+
+			POLYGON_CLIP_AND_RASTERIZE(4);
+#endif
+			
+		}
+		else
+		{
+			GLSTATE.verts[GLSTATE.index++]=newv;
+		}
+		break;
+#undef GLSTATE
+#define GLSTATE (glctx.asm_state.quad_strip)
+	case GL_QUAD_STRIP:
+		if(GLSTATE.index<3)
+		{
+			GLSTATE.verts[GLSTATE.index++]=newv;
+		}
+		else // ready for a quad
+		{
+#ifdef DO_TRIANGULATION
+			clip_buf[0]=GLSTATE.verts[0];
+			clip_buf[1]=GLSTATE.verts[1];
+			clip_buf[2]=newv;
+			POLYGON_CLIP_AND_RASTERIZE(3);
+
+			clip_buf[0]=newv;
+			clip_buf[1]=GLSTATE.verts[2];
+			clip_buf[2]=GLSTATE.verts[0];
+			POLYGON_CLIP_AND_RASTERIZE(3);
+#else
+			clip_buf[0]=GLSTATE.verts[0];
+			clip_buf[1]=GLSTATE.verts[1];
+			clip_buf[2]=newv;
+			clip_buf[3]=GLSTATE.verts[2];
+
+			POLYGON_CLIP_AND_RASTERIZE(4);
+#endif
+			GLSTATE.index=2;
+			GLSTATE.verts[0]=GLSTATE.verts[2];
+			GLSTATE.verts[1]=newv;
+		}
+		break;
 	default:
 		glctx.last_error=GL_INVALID_VALUE;
 		return;
@@ -803,7 +949,6 @@ void glMultiTexCoord4f(GLenum tex, GLfloat s, GLfloat t, GLfloat r, GLfloat q)
 
 void glEdgeFlag(GLboolean flag)
 {
-	_NOT_IMPLEMENTED_(glEdgeFlag)
 	glctx.cur_edge_flag=flag;
 }
 
@@ -1017,17 +1162,22 @@ void glLightModelfv(GLenum pname, const GLfloat *params)
 
 void glGenTextures(GLsizei n, GLuint *textures)
 {
-	*textures=1;
-	//glctx.tex_names.lowest0(n,textures);
+	int begin=0;
+	while(n--)
+	{
+		begin=glctx.tex_names.lowest0(begin,true);
+		if(begin==-1) break;
+		*textures++=begin++;
+	}
 }
 void glDeleteTextures(GLsizei n, const GLuint *textures)
 {
 	TextureObject* obj;
 	while(n--)
 	{
-		if(textures[n]&&textures[n]<YGL_TEXTURE_NAMES_MAX)
+		if(*textures&&*textures<YGL_TEXTURE_NAMES_MAX)
 		{
-			obj=glctx.tex_objs[textures[n]];
+			obj=glctx.tex_objs[*textures];
 			if(obj)
 			{
 				if(obj==glctx.tex_targets[obj->dimension-GL_TEXTURE_1D])
@@ -1035,9 +1185,10 @@ void glDeleteTextures(GLsizei n, const GLuint *textures)
 					// default
 					glctx.tex_targets[obj->dimension-GL_TEXTURE_1D]=glctx.tex_objs[0];
 				}
+				glctx.tex_objs[*textures]=0;
 				delete obj;
 			}
-			//glctx.tex_names.clear(textures[n]);
+			glctx.tex_names.clear(*textures);
 		}
 	}
 }
@@ -1045,7 +1196,7 @@ void glBindTexture(GLenum target, GLuint texture)
 {
 	CHECK_VALID_VALUE
 
-	//glctx.tex_names.set(texture);
+	glctx.tex_names.set(texture);
 	if(!glctx.tex_objs[texture])
 	{
 		// todo: factory
@@ -1078,8 +1229,21 @@ void glTexParameteri(GLenum target, GLenum pname, GLint param)
 	case GL_TEXTURE_WRAP_T:
 		targetobj->wrap_t=param;
 		break;
-	}
 
+	case GL_GENERATE_MIPMAP:
+		targetobj->auto_gen_mipmap=(param==GL_TRUE?true:false);
+		break;
+	}
+	if(targetobj->filter_mag==GL_LINEAR&&
+		(targetobj->filter_min==GL_NEAREST_MIPMAP_NEAREST||
+		targetobj->filter_min==GL_NEAREST_MIPMAP_LINEAR))
+	{
+		targetobj->c=0.5f;
+	}
+	else
+	{
+		targetobj->c=0.f;
+	}
 }
 void glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params)
 {
@@ -1113,7 +1277,11 @@ void glTexEnvfv(GLenum target, GLenum pname, GLfloat* params)
 
 	if(pname==GL_TEXTURE_ENV_COLOR)
 	{
-		ASSIGN_V4(glctx.tex_env_color,params);
+		glctx.tex_env_color[0]=YGL_COLOR_F2I(params[0]);
+		glctx.tex_env_color[1]=YGL_COLOR_F2I(params[1]);
+		glctx.tex_env_color[2]=YGL_COLOR_F2I(params[2]);
+		glctx.tex_env_color[3]=YGL_COLOR_F2I(params[3]);
+		//ASSIGN_V4(glctx.tex_env_color,params);
 	}
 }
 // void glTexGeni(GLenum coord, GLenum pname, GLint param)
@@ -1122,27 +1290,40 @@ void glTexEnvfv(GLenum target, GLenum pname, GLfloat* params)
 // 
 // 	glctx.tex_gen_mode[coord-GL_S]=param;
 // }
+
 void glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels)
 {
 	// format only support RGB, RGBA
 	// type only support GL_UNSIGNED_BYTE, GL_FLOAT
-	// internal data force as RGBA, GL_UNSIGNED_BYTE
+	// internalformat force as RGBA, GL_UNSIGNED_BYTE, always align with 4
+	// check 2^m+b?
+	// check power of two x&(x-1)
 	CHECK_VALID_VALUE
 	// YGL_MAX_TEXTURE_LEVEL
+	border=(border>0); // 0,1
 	
-	TexImage* img=glctx.tex_targets[YGL_TEX_TARGET_2D]->mipmaps+level;
+	TextureObject* texobj=glctx.tex_targets[YGL_TEX_TARGET_2D];
+	TexImage* img=texobj->mipmaps+level;
 	img->border=border;
 	img->width=width;
 	img->height=height;
 
 	if(img->pixels) free(img->pixels);
-	img->pixels=(GLubyte*)malloc(4*width*height);
+	img->pixels=(GLubyte*)malloc(4*sizeof(GLubyte)*width*height); // align with 4, todo: border
 	GLubyte* p=img->pixels;
-	// add border
+	GLint components=(format==GL_RGBA?4:3);
+
+#define UNPACK_ALIGN_WIDTH(w,align) (((w)+(align)-1)/(align)*(align))
+
+	// todo: add border
 	if(type==GL_FLOAT)
 	{
-		GLfloat* q=(GLfloat*)pixels;
+		GLint unpack_line_width=UNPACK_ALIGN_WIDTH(width*components*sizeof(GLfloat),glctx.pixel_store.unpack_alignment);
+
+		GLfloat* line=(GLfloat*)pixels,*q;
 		for(int y=0;y<height;++y)
+		{
+			q=line;
 			for(int x=0;x<width;++x)
 			{
 				*p++=YGL_CLAMP_MIN_MAX(*q,0.f,1.f)*255;++q;
@@ -1154,16 +1335,35 @@ void glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei widt
 				}
 				else *p++=255;
 			}
+			line=(GLfloat*)(((GLubyte*)line)+unpack_line_width);
+		}
 	}
 	else if(type==GL_UNSIGNED_BYTE)
 	{
-		GLfloat* q=(GLfloat*)pixels;
+		GLint unpack_line_width=UNPACK_ALIGN_WIDTH(components*sizeof(GLubyte),glctx.pixel_store.unpack_alignment);
+
+		GLubyte* line=(GLubyte*)pixels,*q;
 		for(int y=0;y<height;++y)
+		{
+			q=line;
 			for(int x=0;x<width;++x)
 			{
 				*p++=*q++;*p++=*q++;*p++=*q++;
 				*p++=(type==GL_RGBA?*q++:255);
 			}
+			line=(GLubyte*)(((GLubyte*)line)+unpack_line_width);
+		}
+	}
+
+	if(level==0)
+	{
+		// width-border?
+		GLuint a=log2(width),b=log2(height);
+		texobj->max_level=MAX(a,b);
+		if(texobj->auto_gen_mipmap)
+		{
+			texobj->gen_mipmap();
+		}
 	}
 }
 /* fog */
@@ -1171,7 +1371,7 @@ void glFogi(GLenum pname, GLint param)
 {
 	CHECK_VALID_VALUE
 
-	switch(param)
+	switch(pname)
 	{
 	case GL_FOG_MODE:
 		glctx.fog_mode=param;
@@ -1215,7 +1415,11 @@ void glFogfv(GLenum pname, const GLfloat *params)
 		glctx.cached_fog_e_s=1.f/(glctx.fog_end-glctx.fog_start);
 		break;
 	case GL_FOG_COLOR:
-		ASSIGN_V4(glctx.fog_color,params);
+		glctx.fog_color[0]=YGL_COLOR_F2I(params[0]);
+		glctx.fog_color[1]=YGL_COLOR_F2I(params[1]);
+		glctx.fog_color[2]=YGL_COLOR_F2I(params[2]);
+		glctx.fog_color[3]=YGL_COLOR_F2I(params[3]);
+		//ASSIGN_V4(glctx.fog_color,params);
 		break;
 	}
 
@@ -1499,8 +1703,10 @@ void glVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *poin
 	glctx.client_arrays[YGL_VERTEX_ARRAY].stride=(stride?stride:(sizeof(GLfloat)*size));
 	glctx.client_arrays[YGL_VERTEX_ARRAY].pointer=pointer;
 }
+// #define GET_CLIENT_ARRAY_ELEMENT(arr,ele_type,i) \
+// 	(ele_type*)(((GLubyte*)(arr)->pointer)+(i)*((arr)->size*sizeof(ele_type)+(arr)->stride))
 #define GET_CLIENT_ARRAY_ELEMENT(arr,ele_type,i) \
-	(ele_type*)(((GLubyte*)(arr)->pointer)+(i)*((arr)->size*sizeof(ele_type)+(arr)->stride))
+	(ele_type*)(((GLubyte*)(arr)->pointer)+(i)*(arr)->stride)
 // generate multiple version?
 void glArrayElement(GLint i)
 {
@@ -1543,7 +1749,12 @@ void glArrayElement(GLint i)
 			break;
 		}
 	}
-	// edge
+	if(YGL_IS_CLIENTSTATE_ENABLED(YGL_EDGE_FLAG_ARRAY))
+	{
+		arr=glctx.client_arrays+YGL_EDGE_FLAG_ARRAY;
+
+		glEdgeFlag(GET_CLIENT_ARRAY_ELEMENT(arr,GLboolean,i));
+	}
 
 	if(YGL_IS_CLIENTSTATE_ENABLED(YGL_VERTEX_ARRAY))
 	{
@@ -1731,6 +1942,36 @@ void glInterleavedArrays(GLenum format, GLsizei stride, const GLvoid *pointer)
 
 }
 
+/* pixel */
+void glPixelStorei(GLenum pname, GLint param)
+{
+	CHECK_VALID_VALUE
+	switch(pname)
+	{
+	case GL_UNPACK_ALIGNMENT:
+		// 1,2,4,8
+		glctx.pixel_store.unpack_alignment=param;
+		break;
+	}
+}
+
+/* hint */
+void glHint(GLenum target, GLenum mode)
+{
+	switch(target)
+	{
+	case GL_PERSPECTIVE_CORRECTION_HINT:
+		if(mode==GL_FASTEST)
+		{
+			YGL_CLEAR_ENABLED_FLAG(glctx.hint,YGL_PERSPECTIVE_CORRECTION_HINT);
+		}
+		else // default nicest(dont_care)
+		{
+			YGL_SET_ENABLED_FLAG(glctx.hint,YGL_PERSPECTIVE_CORRECTION_HINT);
+		}
+		break;
+	}
+}
 
 /* matrix */
 void glMatrixMode(GLenum mode)
@@ -1938,6 +2179,28 @@ void glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdou
 	m[15]=1.f;
 
 	glMultMatrixf(m);
+}
+
+
+/* query */
+void glGetFloatv(GLenum pname, GLfloat *params)
+{
+	switch(pname)
+	{
+	case GL_MODELVIEW_MATRIX:
+		memcpy(params,glctx.matrix_mv.peek()->m,sizeof(GLfloat)*16);
+		break;
+	}
+}
+
+/* attribs*/
+void glPushAttrib(GLbitfield mask)
+{
+
+}
+void glPopAttrib()
+{
+
 }
 
 }//end namespace

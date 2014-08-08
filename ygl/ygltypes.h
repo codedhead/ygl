@@ -21,9 +21,10 @@ typedef float			GLclampf;
 typedef double			GLdouble;
 typedef double			GLclampd;
 
-// helper
+// buffer type
 typedef GLubyte cbuf_type;
 typedef GLuint zbuf_type;
+//typedef GLubyte zbuf_type;
 typedef GLuint sbuf_type;
 
 }

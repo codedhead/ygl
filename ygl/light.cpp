@@ -28,6 +28,8 @@ void lit2_spec(Vertex& vert,const Material& front_mat,const Material& back_mat,c
 	(res)[2]+=(k)*(a)[2]*(b)[2];\
 	(res)[3]+=(k)*(a)[3]*(b)[3];
 
+// todo: support secondary color, seperate store specular color, blend with texture
+
 void LightSource::lit(Vertex* vert,const Normal& nrm,const Vector& v_eye,const Material& front_mat)
 {
 	GLdouble lamb,spot=1.,phong,atten=0.;
@@ -145,6 +147,7 @@ void LightSource::lit_spec(Vertex* vert,const Normal& nrm,const Vector& v_eye,co
 // 	vert->col_back_sec=vert->col_front_sec;
 }
 
+
 void do_lighting(Vertex* vert,const Normal& nrm)
 {
 	Vector view(0.f,0.f,1.f);
@@ -159,12 +162,12 @@ void do_lighting(Vertex* vert,const Normal& nrm)
 		glctx.material_front.ambient[2]*glctx.light_model.ambient_scene[2];
 
 	vert->col_front_pri[3]=glctx.material_front.diffuse[3];
-	ASSIGN_V4_WITH(vert->col_front_sec,0.f,0.f,0.f,1.f);
+	//ASSIGN_V4_WITH(vert->col_front_sec,0.f,0.f,0.f,1.f);
 
 	if(glctx.light_model.two_sided)
 	{
 		vert->col_back_pri[3]=glctx.material_back.diffuse[3];
-		ASSIGN_V4_WITH(vert->col_back_sec,0.f,0.f,0.f,1.f);
+		//ASSIGN_V4_WITH(vert->col_back_sec,0.f,0.f,0.f,1.f);
 		/*
 		vert->col_back_pri[0]=glctx.material_back.emission[0]+
 			glctx.material_back.ambient[0]*glctx.light_model.ambient_scene[0];

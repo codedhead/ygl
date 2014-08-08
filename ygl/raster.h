@@ -12,13 +12,14 @@ namespace raster
 #define line_bresenham raster::line
 #define line_xiaolinwu raster::line_aa
 
-	enum ETRecordType
+	enum FragmentShaderType
 	{
-		ETRec=0,
-		ETRecSmooth=1,
-		ETRecTex=(1<<1),
-		ETRecBlend=(1<<2),
-		ETRecFog=(1<<3),
+		FragFlat=1,
+		FragSmooth=(1<<1),
+		FragTex=(1<<2),
+		FragFog=(1<<3),
+		FragPersp=(1<<4),
+		//FragPerPixelLighting
 	};
 
 // 	enum ETRecAttribColor
@@ -38,29 +39,31 @@ namespace raster
 // 		EAttrib_TEX_COMPS,
 // 	};
 
-#define SETUP_ATTRIB_NOP(attr_index,from) \
-	att[attr_index]=(from);
-
-#define SETUP_DATTRIB_NOP(attr_index,to) \
-	d_att_dy[attr_index]=((to)-att[attr_index])*_dy;
-
-#define GET_ATTRIB_NOP(attr_index) (att_np[attr_index])
-
-#define SETUP_ATTRIB_P(attr_index,from) \
-	att_w[attr_index]=(from)*_w;
-#define SETUP_DATTRIB_P(attr_index,to) \
-	d_att_w_dy[attr_index]=((to)*theother_w-att_w[attr_index])*_dy;
-
-#define GET_ATTRIB_P(attr_index) (att_p_w[attr_index]*w)
-
-#define SETUP_ATTRIB_AND_DELTA(attr_index,from,to) \
-	SETUP_ATTRIB(attr_index,from);\
-	SETUP_DATTRIB(attr_index,to);
+// #define SETUP_ATTRIB_NOP(attr_index,from) \
+// 	att[attr_index]=(from);
+// 
+// #define SETUP_DATTRIB_NOP(attr_index,to) \
+// 	d_att_dy[attr_index]=((to)-att[attr_index])*_dy;
+// 
+// #define GET_ATTRIB_NOP(attr_index) (att_np[attr_index])
+// 
+// #define SETUP_ATTRIB_P(attr_index,from) \
+// 	att_w[attr_index]=(from)*_w;
+// #define SETUP_DATTRIB_P(attr_index,to) \
+// 	d_att_w_dy[attr_index]=((to)*theother_w-att_w[attr_index])*_dy;
+// 
+// #define GET_ATTRIB_P(attr_index) (att_p_w[attr_index]*w)
+// 
+// #define SETUP_ATTRIB_AND_DELTA(attr_index,from,to) \
+// 	SETUP_ATTRIB(attr_index,from);\
+// 	SETUP_DATTRIB(attr_index,to);
 	
 
 
 	//todo: line_record (incre)
 	
+
+	void point(Vertex* v);
 	// bresenham
 	void line(Vertex* v);
 	// lerp color
