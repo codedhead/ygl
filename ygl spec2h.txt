@@ -1,2 +1,3 @@
+regular expressions that translate opengl spec doc to .h file
 ^\t -> \tGL_
 (\t| )(# .+)$ -> ,/*\2*/
